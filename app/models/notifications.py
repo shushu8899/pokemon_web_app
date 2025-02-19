@@ -6,6 +6,7 @@ Notification Table - Will contain all the notification data
 
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
 from app.db.db import Base
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -25,3 +26,12 @@ class Notification(Base):
 
     def __repr__(self):
         return f"<Notification(id={self.NotificationID}, user_id={self.BidderID}, auction_id={self.AuctionID}, message='{self.Message}', timestamp='{self.TimeSent}')>"
+
+class NotificationBase(BaseModel):
+    review: str
+
+class CardInfo(NotificationBase):
+    pass
+
+class CardResponse(NotificationBase):
+    model_config = ConfigDict(from_attributes=True)

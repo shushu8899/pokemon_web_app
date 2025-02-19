@@ -1,6 +1,7 @@
 from fastapi import Depends
 from app.services.auction_service import AuctionService
 from app.services.profile_service import ProfileService
+from app.services.search_service import SearchService
 from app.dependencies.db import get_db
 from sqlalchemy.orm import Session
 
@@ -9,3 +10,6 @@ def get_auction_service(db: Session = Depends(get_db)) -> AuctionService:
 
 def get_profile_service(db: Session = Depends(get_db)) -> ProfileService:
     return ProfileService(db)
+
+def get_search_service(db: Session = Depends(get_db)) -> SearchService:
+    return SearchService(db)
