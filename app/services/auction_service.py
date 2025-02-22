@@ -150,7 +150,7 @@ class AuctionService:
 
             # If the previous highest bidder exists, create a notification
             if previous_highest_bidder:
-                message = f"You have been outbid! New highest bid: ${bid_info.HighestBid}"
+                message = f"You have been outbid! New highest bid: ${bid_info.BidAmount}"
                 notification = Notification(
                     BidderID=previous_highest_bidder,  # Use BidderID (from Notification model)
                     AuctionID=auction.AuctionID,  # Use AuctionID (from Notification model)
