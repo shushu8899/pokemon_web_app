@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { motion } from "framer-motion"; // ✅ Import Framer Motion
 import axios from "axios";
 
 // Define the Auction details type
 interface AuctionDetail {
     AuctionID: number;
-    title: string;
     Status: string;
     HighestBid: number;
     CardName: string;
@@ -24,12 +24,13 @@ const BiddingPage: React.FC = () => {
     const [auction, setAuction] = useState<AuctionDetail | null>(null);
     const [bidAmount, setBidAmount] = useState<string>("");
     const [message, setMessage] = useState<string>("");
+    const [showLoginPopup, setShowLoginPopup] = useState(false); // ✅ New state for login popup
 
     useEffect(() => {
-      if (auctionID) {
-          fetchAuctionDetails();
+        if (auctionID) {
+            fetchAuctionDetails();
         }
-    }, [auctionID]); 
+    }, [auctionID]);
 
     const fetchAuctionDetails = async () => {
         try {
@@ -47,77 +48,161 @@ const BiddingPage: React.FC = () => {
     };
 
     const submitBid = async () => {
-      if (!auction) return;
-  
-      const bidValue = parseFloat(bidAmount);
-      if (isNaN(bidValue) || bidValue <= auction.HighestBid) {
-          setMessage("Bid must be higher than the current highest bid!");
-          return;
-      }
-  
-      try {
-          const token = localStorage.getItem("authToken"); // ✅ Retrieve stored token
-          if (!token) {
-              setMessage("Please log in to place a bid.");
-              return;
-          }
-  
-          const bidData: BidRequest = {
-              auction_id: auction.AuctionID,
-              user_id: 1, // This should be removed; backend should get user from token
-              HighestBid: bidValue
-          };
-  
-          const response = await axios.post(
-              "http://127.0.0.1:8000/bidding/place-bid",
-              bidData,
-              { headers: { Authorization: `Bearer ${token}` } } // ✅ Attach Auth Header
-          );
-  
-          setMessage(response.data.message);
-          setAuction((prev) => (prev ? { ...prev, HighestBid: bidValue } : prev)); // ✅ Update UI bid
-      } catch (error) {
-          console.error("Error placing bid:", error);
-          setMessage("Failed to place bid. Please try again.");
-      }
-  };
+        if (!auction) return;
 
-    if (!auction) return <h2>Loading auction details...</h2>;
+        const bidValue = parseFloat(bidAmount);
+        if (isNaN(bidValue) || bidValue <= auction.HighestBid) {
+            setMessage("Bid must be higher than the current highest bid!");
+            return;
+        }
+
+        const token = localStorage.getItem("authToken"); // ✅ Retrieve stored token
+        if (!token) {
+            setShowLoginPopup(true); // ✅ Show the login popup
+            return;
+        }
+
+        try {
+            const bidData: BidRequest = {
+                auction_id: auction.AuctionID,
+                user_id: 1, // Should be removed; backend should get user from token
+                HighestBid: bidValue
+            };
+
+            const response = await axios.post(
+                "http://127.0.0.1:8000/bidding/place-bid",
+                bidData,
+                { headers: { Authorization: `Bearer ${token}` } } // ✅ Attach Auth Header
+            );
+
+            setMessage(response.data.message);
+            setAuction((prev) => (prev ? { ...prev, HighestBid: bidValue } : prev)); // ✅ Update UI bid
+        } catch (error) {
+            console.error("Error placing bid:", error);
+            setMessage("Failed to place bid. Please try again.");
+        }
+    };
+
+    if (!auction) return <h2 style={{ color: "#FFD700", textAlign: "center" }}>Loading auction details...</h2>;
 
     return (
-        <div style={{ padding: "20px", textAlign: "center" }}>
-            <h2>Bidding for {auction.title}</h2>
-            
-            {/* Auction Image */}
-            <img src={auction.ImageURL} alt={auction.CardName} width="300px" />
+        <div style={{ padding: "20px", textAlign: "center", backgroundColor: "#001f3f", minHeight: "100vh" }}>
+            <h2 style={{ color: "#FFD700", fontSize: "28px", fontWeight: "bold", marginBottom: "20px" }}>
+                🛒 Bidding for {auction.CardName}
+            </h2>
 
-            {/* Auction Details */}
-            <div style={{
-                border: "1px solid #ddd",
-                padding: "15px",
-                marginTop: "15px",
-                backgroundColor: "#f9f9f9",
-                borderRadius: "5px"
-            }}>
-                <p><strong>Auction ID:</strong> {auction.AuctionID}</p>
-                <p><strong>Status:</strong> {auction.Status}</p>
-                <p><strong>Highest Bid:</strong> ${auction.HighestBid}</p>
-                <p><strong>Card Name:</strong> {auction.CardName}</p>
-            </div>
+            {/* Auction Box */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="shimmer"
+                style={{
+                    border: "3px solid #FFD700",
+                    borderRadius: "16px",
+                    backgroundColor: "#003366",
+                    boxShadow: "6px 6px 14px rgba(255, 215, 0, 0.3)",
+                    padding: "20px",
+                    width: "400px",
+                    margin: "auto"
+                }}
+            >
+                {/* Auction Image */}
+                <img
+                    src={auction.ImageURL}
+                    alt={auction.CardName}
+                    className="pokemon-image"
+                />
+
+                {/* Auction Details */}
+                <div style={{
+                    marginTop: "15px",
+                    padding: "10px",
+                    borderTop: "3px solid #FFD700",
+                    fontSize: "16px",
+                    lineHeight: "0.8",
+                    textAlign: "left",
+                    color: "#FFD700"
+                }}>
+                    <p><strong>🔹 Auction ID:</strong> {auction.AuctionID}</p>
+                    <p><strong>📜 Status:</strong> {auction.Status}</p>
+                    <p><strong>💰 Highest Bid:</strong> ${auction.HighestBid}</p>
+                    <p><strong>🎴 Card Name:</strong> {auction.CardName}</p>
+                </div>
+            </motion.div>
 
             {/* Bidding Input */}
-            <div style={{ marginTop: "15px" }}>
+            <div style={{ marginTop: "20px" }}>
                 <input
                     type="number"
                     placeholder="Enter your bid"
                     value={bidAmount}
                     onChange={handleBidChange}
-                    style={{ padding: "10px", width: "150px" }}
+                    style={{
+                        padding: "10px",
+                        width: "200px",
+                        fontSize: "16px",
+                        borderRadius: "5px",
+                        border: "1px solid #FFD700",
+                        backgroundColor: "#003366",
+                        color: "#FFD700",
+                        textAlign: "center"
+                    }}
                 />
-                <button onClick={submitBid} style={{ marginLeft: "10px", padding: "10px 20px" }}>
+                <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={submitBid}
+                    style={{
+                        marginLeft: "10px",
+                        padding: "10px 20px",
+                        fontSize: "16px",
+                        backgroundColor: "#FFD700",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer"
+                    }}
+                >
                     Place Bid
-                </button>
+                </motion.button>
             </div>
+
+            {/* Login Popup (Only Shows When Needed) */}
+            {showLoginPopup && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                        position: "fixed",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        backgroundColor: "#003366",
+                        color: "#FFD700",
+                        padding: "20px",
+                        borderRadius: "12px",
+                        boxShadow: "4px 4px 10px rgba(255, 215, 0, 0.3)",
+                        textAlign: "center",
+                        width: "300px"
+                    }}
+                >
+                    <p style={{ fontSize: "18px", fontWeight: "bold" }}>⚠ Please log in to place a bid!</p>
+                    <button
+                        onClick={() => setShowLoginPopup(false)}
+                        style={{
+                            padding: "8px 16px",
+                            backgroundColor: "#FFD700",
+                            border: "none",
+                            borderRadius: "5px",
+                            cursor: "pointer",
+                            fontSize: "16px",
+                            marginTop: "10px"
+                        }}
+                    >
+                        OK
+                    </button>
+                </motion.div>
+            )}
 
             {/* Bid Status Message */}
             {message && <p style={{ color: "green", marginTop: "10px" }}>{message}</p>}
@@ -126,4 +211,3 @@ const BiddingPage: React.FC = () => {
 };
 
 export default BiddingPage;
-

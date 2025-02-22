@@ -22,9 +22,8 @@ h1 {
     text-align: center;
 }
 p {
-    font-size: 1.5rem;
+    font-size: 1.0rem;
     text-align: center;
-    color: #f10606
 }
 button {
     border-radius: none;
@@ -49,6 +48,28 @@ div {
     border-radius: 6px;
     border: 1px solid #fca400b6;
 }
+
+.pokemon-image {
+    max-width: 100%;
+    width: 100%; /* Image fills its container */
+    height: 100%;
+    object-fit: cover; /* Prevents stretching */
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+  }
+
+
+@keyframes shimmer {
+0% { background-position: -400px 0; }
+100% { background-position: 400px 0; }
+}
+
+.shimmer {
+background: linear-gradient(120deg, rgba(255, 215, 0, 0.1) 30%, rgba(255, 215, 0, 0.3) 50%, rgba(255, 215, 0, 0.1) 70%);
+background-size: 800px 100%;
+animation: shimmer 2s infinite linear;
+}
+  
 
 @tailwind base;
 @tailwind components;
