@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile, Query, BackgroundTasks, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from app.services.auction_service import AuctionService
 from app.services.profile_service import ProfileService
@@ -11,6 +11,7 @@ from app.models.auction import AuctionInfo
 from app.models.notifications import Notification
 from typing import Dict
 from sqlalchemy.orm import Session
+from app.dependencies.auth import req_user_role #Add this
 import os
 import shutil
 import requests
@@ -31,17 +32,20 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
     total_pages =  auction_service.get_total_page()
     print(auctions)
     print(total_pages)
-    return {"auctions": auctions, "total_pages": total_pages}
+    for auction in auctions:
+        auction["EndTime"] = auction["EndTime"].timestamp()
+    return {"auctions": auctions, "total_pages": int(total_pages)}
 
 @router.get("/auction-details/{auction_id}")
 async def display_auction_details(auction_id:int, auction_service: AuctionService = Depends(get_auction_service)):
     auction = auction_service.get_auctions_details(auction_id)
+    auction["EndTime"] = auction["EndTime"].timestamp()
     if not auction:
         raise HTTPException(status_code=404, detail="Auction not found")
     return auction
 
-@router.post("/place-bid")
-async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depends(get_auction_service), profile_service: ProfileService = Depends(get_profile_service), auth_info: dict = Depends(cognito_service.validate_token)):  # ✅ Require authentication
+@router.post("/place-bid",status_code= status.HTTP_200_OK, dependencies=[Depends(req_user_role)])
+async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depends(get_auction_service), profile_service: ProfileService = Depends(get_profile_service), auth_info: dict = Depends(req_user_role)):  # ✅ Require authentication
     cognito_id = auth_info.get("username")
     user_id = profile_service.get_profile_id(cognito_id)
     if not user_id:
@@ -50,6 +54,7 @@ async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depe
     if auction:
         return auction
     else:
+        print(auction)
         raise HTTPException(status_code=400, detail="Failed to place bid")
 
 @router.get("/notifications/{auction_id}")

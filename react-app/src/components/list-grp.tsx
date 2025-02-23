@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Auction, fetchAuctions } from "../services/auction-service";
 import axios from "axios";
+import FloatingPokemon from "./FloatingPokemon";
+import { calculateTimeLeft } from "../utils/timeUtils.tsx"; // ✅ Import the function
 
 // Define the Auction type based on FastAPI response
 interface Auction {
@@ -14,6 +15,7 @@ interface Auction {
   CardName: string;
   CardQuality: string;
   ImageURL: string;
+  EndTime: number;
 }
 
 const AuctionList: React.FC = () => {
@@ -21,118 +23,214 @@ const AuctionList: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [inputPage, setInputPage] = useState<string>("");
+  const [timers, setTimers] = useState<{ [key: number]: { expired: boolean; timeLeft: string } }>({}); // ✅ Store timers
   const navigate = useNavigate();
 
-
-  const fetchAuctions = async (pageNumber:number) => {
+  const fetchAuctions = async (pageNumber: number) => {
     try {
       const response = await axios.get<{ auctions: Auction[]; total_pages: number }>(
         `http://127.0.0.1:8000/bidding/auction-collection?page=${pageNumber}`
-    );
+      );
+      console.log("API Response in React:", response.data); // ✅ Log response
       setAuctions(response.data.auctions);
       setTotalPages(response.data.total_pages);
-  } catch (error) {
+    } catch (error) {
       console.error("Error fetching auctions:", error);
-   }
+    }
   };
 
   useEffect(() => {
     fetchAuctions(page);
-  }, [page]); // Fetch auctions when page changes
+  }, [page]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimers((prevTimers) => {
+        const newTimers = { ...prevTimers };
+        auctions.forEach((auction) => {
+          newTimers[auction.AuctionID] = calculateTimeLeft(auction.EndTime); // ✅ Uses fixed function
+        });
+        return newTimers;
+      });
+    }, 1000); // ✅ Updates every second
+  
+    return () => clearInterval(interval); // ✅ Cleanup interval on unmount
+  }, [auctions]);
 
   const handlePageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      setInputPage(event.target.value);
+    setInputPage(event.target.value);
   };
 
   const goToPage = () => {
     const pageNumber = parseInt(inputPage);
     if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
-        setPage(pageNumber);
+      setPage(pageNumber);
     } else {
-        alert("Invalid page number");
+      alert("Invalid page number");
     }
   };
 
-  const goToBiddingPage = (auctionID: number) => {
-    navigate(`/bidding/${auctionID}`);
-  };
-
-
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
-        <h1>Live Auctions</h1>
+      <h1>Live Auctions</h1>
+      <div style={{ padding: "20px", textAlign: "center", backgroundColor: "#001f3f", minHeight: "100vh" }}>
+        <h2 style={{ color: "#FFD700", fontSize: "28px", fontWeight: "bold", marginBottom: "20px" }}>
+          🛒 Pokémon Auction House
+        </h2>
+
+        {/* Floating Pokémon that moves & displays message */}
+        <FloatingPokemon />
 
         {/* Auction Grid */}
         <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)", // Two cards per row
-            gap: "20px",
-            justifyContent: "center",
-            marginTop: "20px"
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)", // Three Pokémon per row
+          gap: "10px", // Increased gap for better spacing
+          borderRadius: "12px", // ✅ Optional rounded corners
+          justifyContent: "center",
+          padding: "20px",
+          border: "20px solid rgba(255, 213, 4, 0.61)"
         }}>
-            {auctions.map((auction) => (
-                <div key={auction.AuctionID} style={{
-                    border: "1px solid #ddd",
-                    borderRadius: "10px",
-                    padding: "10px",
-                    textAlign: "center",
-                    backgroundColor: "#fff",
-                    boxShadow: "2px 2px 10px rgba(0, 0, 0, 0.1)"
-                }}>
-                    {/* Clickable Image */}
-                    <img
-                        src={auction.ImageURL}
-                        alt={auction.CardName}
-                        width="100%"
-                        style={{ borderRadius: "5px", cursor: "pointer" }}
-                        onClick={() => goToBiddingPage(auction.AuctionID)}
-                    />
+          {auctions.length > 0 ? auctions.map((auction) => {
+            const auctionTimer = timers[auction.AuctionID] || { expired: false, timeLeft: "Loading..." };
+          
+            return (
+              <div key={auction.AuctionID} style={{
+                border: "2px solid #FFD700",
+                borderRadius: "12px",
+                padding: "10px",
+                textAlign: "center",
+                backgroundColor: "#003366",
+                boxShadow: "4px 4px 12px rgba(255, 215, 0, 0.2)",
+                transition: "transform 0.3s ease-in-out",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                height: "450px",
+                width: "400px", // Ensure the card fits well
+                margin: "auto", // Centering the card
+                transform: "scale(0.8)", // Initial scale
+                transformOrigin: "center", // Scale from center
+              }}
 
-                    {/* Auction Details */}
-                    <div style={{
-                        marginTop: "10px",
-                        padding: "10px",
-                        borderTop: "1px solid #ddd",
-                        textAlign: "left"
-                    }}>
-                        <p><strong>Auction ID:</strong> {auction.AuctionID}</p>
-                        <p><strong>Title:</strong> {auction.title}</p>
-                        <p><strong>Status:</strong> {auction.Status}</p>
-                        <p><strong>Highest Bid:</strong> ${auction.HighestBid}</p>
-                        <p><strong>Card Name:</strong> {auction.CardName}</p>
-                    </div>
+              onClick={() => {
+                if (!auctionTimer.expired) {
+                  navigate(`/bidding/${auction.AuctionID}`);
+                }
+              }} // ✅ Prevents navigation when expired
+              
+              onMouseOver={(e) => {
+                if (!auctionTimer.expired) {
+                  e.currentTarget.style.transform = "scale(1)";
+                } else {
+                  e.currentTarget.style.transform = "scale(0.8)"; // ✅ Ensures expired items stay the same
+                }
+              }}
+              
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "scale(0.8)"; // ✅ Always reverts to original size
+              }}
+              
+              className="glowing-box"
+              
+              >
+                {/* Pokémon Image (70% height of card) */}
+                <div style={{ flex: "70%", overflow: "hidden", display: "flex", justifyContent: "center" }}>
+                  <img
+                    src={auction.ImageURL}
+                    alt={auction.CardName}
+                    className="pokemon-image"
+                  />
                 </div>
-            ))}
+
+                {/* Auction Details (30% height of card) */}
+                <div style={{
+                  flex: "30%",
+                  padding: "10px",
+                  fontSize: "14px",
+                  lineHeight: "1.2", // Reduced line height for compact text
+                  textAlign: "left",
+                  color: "#FFD700" // Gold text for better readability
+                }}>
+                  <p><strong>🔹 ID:</strong> {auction.AuctionID}</p>
+                  <p><strong>🏆 Card Name:</strong> {auction.CardName}</p>
+                  <p><strong>💰 Highest Bid:</strong> ${auction.HighestBid}</p>
+
+                  {/* Countdown Timer */}
+                  <p style={{
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      color: auctionTimer.expired 
+                        ? "red" 
+                        : (parseInt(auctionTimer.timeLeft) > 86400) // ✅ Less than 1 day (86400 seconds)
+                          ? "yellow" 
+                          : "#FFD700"
+                    }}>
+                      ⏳ {auctionTimer.expired ? "Auction Ended" : `Time Left: ${auctionTimer.timeLeft}`}
+                  </p>
+                </div>
+              </div>
+            )
+          }) : (
+            <p style={{ color: "#FFD700", fontSize: "18px", textAlign: "center", fontWeight: "bold" }}>
+              No Pokémon auctions available.
+            </p>
+          )}
         </div>
 
         {/* Pagination Controls */}
-        <div style={{ marginTop: "20px", justifyContent: "center", alignItems: "center" }}>
-            <button onClick={() => setPage((prev) => Math.max(prev - 1, 1))} disabled={page === 1}
-             className = "p-2 text-black rounded bg-orange-200 hover:bg-orange-300" style={{ marginLeft: "10px" }}   
-                >
-                Previous
-            </button>
+        <div style={{ marginTop: "30px" }}>
+          <button
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
+            style={{ marginLeft: "10px" }}
+          >
+            Previous
+          </button>
 
-            <span style={{ margin: "0 10px" }}> Page {page} of {totalPages} </span>
+          <span style={{ margin: "0 15px", color: "#FFD700", fontSize: "18px", fontWeight: "bold" }}>
+            Page {page} of {totalPages}
+          </span>
 
-            <button onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))} disabled={page === totalPages}
-             className = "p-2 text-black rounded bg-orange-200 hover:bg-orange-300" style={{ marginLeft: "10px" }}   
-                >
-                Next
-            </button>
+          <button
+            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={page === totalPages}
+            className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
+            style={{ marginLeft: "10px" }}
+          >
+            Next
+          </button>
 
-            {/* Page Number Input */}
-            <input
-                type="number"
-                value={inputPage}
-                onChange={handlePageChange}
-                placeholder="Go to page"
-                style={{ marginLeft: "10px", padding: "5px", width: "125px", height: "40px", textAlign: "center", border: "1px solid orange", borderRadius: "5px" }}
-            />
-            <button onClick={goToPage} className = "p-2 text-black rounded bg-orange-200 hover:bg-orange-300" style={{ marginLeft: "10px" }}>Go</button>
+          {/* Page Number Input */}
+          <input
+            type="number"
+            value={inputPage}
+            onChange={handlePageChange}
+            placeholder="Go to page"
+            style={{
+              marginLeft: "15px",
+              padding: "8px",
+              width: "80px",
+              fontSize: "16px",
+              textAlign: "center",
+              border: "1px solid #FFD700",
+              backgroundColor: "#003366",
+              color: "#FFD700",
+              borderRadius: "5px"
+            }}
+          />
+          <button
+            onClick={goToPage}
+            className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
+            style={{ marginLeft: "10px" }}
+          >
+            Go
+          </button>
         </div>
+      </div>
     </div>
-);
+  );
 };
 
 export default AuctionList;

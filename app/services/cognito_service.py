@@ -4,7 +4,7 @@ import boto3
 import hmac
 import hashlib
 import base64
-from fastapi import Depends
+from fastapi import Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import requests
 from app.exceptions import ServiceException
@@ -346,7 +346,7 @@ class RoleChecker:
     def __init__(self, allowed_role: str):
         self.allowed_role = allowed_role
 
-    def __call__(self, auth: HTTPAuthorizationCredentials = Depends(bearer_scheme), 
+    def __call__(self, auth: HTTPAuthorizationCredentials = Security(bearer_scheme), 
                  cognito_service: CognitoService = Depends(CognitoService)):
         # Validate the token and check the user's role
         if not auth:

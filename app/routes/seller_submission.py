@@ -5,7 +5,7 @@ from app.models.auction import Auction, AuctionResponse, AuctionInfo
 from app.models.card import Card
 from app.services.auction_service import AuctionService
 from app.dependencies.services import get_auction_service
-from app.dependencies.auth import req_user_role
+from app.dependencies.auth import req_user_role #Add this
 from starlette.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timedelta
@@ -16,6 +16,7 @@ import logging
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from pydantic import ValidationError
+import pandas as pd
 
 router = APIRouter()
 
@@ -32,9 +33,17 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(TEMPLATES_DIR, exist_ok=True)
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
+
+pokemon_file =pd.read_csv(r"C:\Users\shuji\OneDrive\Desktop\School\Modern Software Sln\Project\pokemon-cards.csv")
+url_list = pokemon_file['image_url'].tolist()
+url_used = set()
+name_list = pokemon_file['name'].tolist()
+name_used = set()
+
+
 '''To handle file uploads and form form data.'''
-@router.post("/submit-auction", response_model=AuctionResponse, status_code=status.HTTP_201_CREATED, 
-             dependencies=[Depends(req_user_role)])
+@router.post("/submit-auction", response_model=AuctionResponse, status_code=status.HTTP_201_CREATED,
+dependencies=[Depends(req_user_role)]) # Add this
 def create_auction(
     file: UploadFile = File(...),
     card_name: str = Form(...),
@@ -59,6 +68,12 @@ def create_auction(
         logging.error(f"Failed to save file: {str(e)}")
         print("500 was raised")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    
+    #adding dummy card name tp the database
+    for i in range(len(name_list)):
+        if name_list[i] not in name_used:
+            card_name = name_list[i]
+            name_used.add(card_name)
 
     '''Create card record'''
     card = Card(CardName=card_name,
@@ -83,6 +98,13 @@ def create_auction(
     # Validate the minimum increment
     if minimum_increment <= 0:
         raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
+
+    #dummy values to input for url for now until we get the actual url
+    for i in range(len(url_list)):
+        if url_list[i] not in url_used:
+            file_path = url_list[i]
+            url_used.add(url_list[i])
+            break
 
     '''Create auction record'''
     auction_data = Auction(

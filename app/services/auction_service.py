@@ -11,8 +11,8 @@ from app.models.auction import Auction, AuctionInfo, AuctionBid
 from app.models.notifications import Notification
 from app.services.profile_service import ProfileService
 from datetime import datetime, timezone
-from fastapi import HTTPException, BackgroundTasks
-
+from fastapi import HTTPException, BackgroundTasks, HTTPException, status, Depends
+from app.dependencies.auth import req_user_role #Add this
 from typing import Union
 
 
@@ -32,6 +32,7 @@ class AuctionService:
                 Auction.AuctionID,
                 Auction.CardID,
                 Auction.Status,
+                Auction.EndTime,
                 Auction.HighestBid,
                 Card.IsValidated,
                 Card.CardName,
@@ -39,13 +40,13 @@ class AuctionService:
                 Auction.ImageURL  # Ensure this is the correct field in `Card)
             )
             .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired
+            # .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired to add back
             .order_by(Auction.EndTime)  # Sort by earliest expiration
             .offset(offset)
             .limit(page_size)
             .all()
         )
-        return [dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
+        return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
     def get_auctions_details(self, auction_id: int):
         """
@@ -56,6 +57,7 @@ class AuctionService:
             Auction.AuctionID,
             Auction.CardID,
             Auction.Status,
+            Auction.EndTime,
             Auction.HighestBid,
             Card.IsValidated,
             Card.CardName,
@@ -67,7 +69,7 @@ class AuctionService:
             .first()
         )
         print(query_result)
-        auction_indiv = dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
+        auction_indiv = dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
         if not auction_indiv:
             raise HTTPException(status_code=404, detail="Auction not found")
         return auction_indiv
@@ -78,8 +80,10 @@ class AuctionService:
             """
             Get total page of auctions
             """
-            current_date = datetime.today().date() # assume endtime is a date
-            available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()
+            current_date = datetime.utcnow().isoformat()  # ✅ Returns "YYYY-MM-DDTHH:MM:SS.ssssss"
+            print(current_date)
+            available_auction = self.db.query(Auction).all()
+            # available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()  # to add back
             return len(available_auction) // 10 + 1
     
     def get_auction_by_id(self, auction_id: int):
@@ -137,20 +141,23 @@ class AuctionService:
         if auction.SellerID == user_id:
             return None  # Seller cannot bid on their own auction
         if auction.HighestBid + auction.MinimumIncrement > bid_info.BidAmount:
+            print(f"user bid {bid_info.BidAmount} not high enough, cur bid : {auction.HighestBid + auction.MinimumIncrement}")
             return None  # Current bid not high enough
         else:
-            # Save the previous highest bidder ID before updating the auction
+            #Save the previous highest bidder ID before updating the auction
             previous_highest_bidder = auction.HighestBidderID
             previous_highest_bid = auction.HighestBid
-
-            setattr(auction, "HighestBid", bid_info.BidAmount)
-            setattr(auction, "HighestBidderID", user_id)
+            for key, value in bid_info.model_dump().items():
+                setattr(auction, key, value)
+          # Update bid fields explicitly
+            auction.HighestBid = bid_info.BidAmount
+            auction.HighestBidderID = user_id
             self.db.commit()
             self.db.refresh(auction)
 
             # If the previous highest bidder exists, create a notification
             if previous_highest_bidder:
-                message = f"You have been outbid! New highest bid: ${bid_info.HighestBid}"
+                message = f"You have been outbid! New highest bid: ${bid_info.BidAmount}" #changed to bid amount
                 notification = Notification(
                     BidderID=previous_highest_bidder,  # Use BidderID (from Notification model)
                     AuctionID=auction.AuctionID,  # Use AuctionID (from Notification model)
