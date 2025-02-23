@@ -60,7 +60,7 @@ const AuctionList: React.FC = () => {
 
   return (
     <div style={{ padding: "20px", textAlign: "center" }}>
-        <h2>Live Auctions</h2>
+        <h1>Live Auctions</h1>
 
         {/* Auction Grid */}
         <div style={{
@@ -106,14 +106,18 @@ const AuctionList: React.FC = () => {
         </div>
 
         {/* Pagination Controls */}
-        <div style={{ marginTop: "20px" }}>
-            <button onClick={() => setPage((prev) => Math.max(prev - 1, 1))} disabled={page === 1}>
+        <div style={{ marginTop: "20px", justifyContent: "center", alignItems: "center" }}>
+            <button onClick={() => setPage((prev) => Math.max(prev - 1, 1))} disabled={page === 1}
+             className = "p-2 text-black rounded bg-orange-200 hover:bg-orange-300" style={{ marginLeft: "10px" }}   
+                >
                 Previous
             </button>
 
             <span style={{ margin: "0 10px" }}> Page {page} of {totalPages} </span>
 
-            <button onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))} disabled={page === totalPages}>
+            <button onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))} disabled={page === totalPages}
+             className = "p-2 text-black rounded bg-orange-200 hover:bg-orange-300" style={{ marginLeft: "10px" }}   
+                >
                 Next
             </button>
 
@@ -123,9 +127,9 @@ const AuctionList: React.FC = () => {
                 value={inputPage}
                 onChange={handlePageChange}
                 placeholder="Go to page"
-                style={{ marginLeft: "10px", padding: "5px", width: "60px" }}
+                style={{ marginLeft: "10px", padding: "5px", width: "125px", height: "40px", textAlign: "center", border: "1px solid orange", borderRadius: "5px" }}
             />
-            <button onClick={goToPage} style={{ marginLeft: "5px" }}>Go</button>
+            <button onClick={goToPage} className = "p-2 text-black rounded bg-orange-200 hover:bg-orange-300" style={{ marginLeft: "10px" }}>Go</button>
         </div>
     </div>
 );

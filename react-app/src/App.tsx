@@ -42,37 +42,40 @@ import { fetchSearchResults } from "./services/searchpage-service";
 
 function App() {
   return (
-    <div className="max-w-2xl bg-white">
-      {/* Logo */}
-      <img src={Logo} alt="Auction Finder Logo" className="w-10 mb-1 mx-auto py-2" />
-      {/* Navigation Panel */}
-      <div className="items-center text-center bg-white">
-        <div className= "space-y-2">
-          <Link to="/">
-            <button className="w-full px-4 py-2 text-black bold-text">
-              Main
-            </button>
-          </Link>
-          <Link to="/auction/:id">
-            <button className="w-full px-4 py-2 text-black bold-text">
-              Auction Details
-            </button>
-          </Link>
-          <Link to="/search">
-            <button className="w-full px-4 py-2 text-black bold-text">
-              Search for cards
-            </button>
-          </Link>
-          <Link to="/login">
-            <button className="w-full px-4 py-2 text-black bold-text">
-              Log in
-            </button>
-          </Link>
+    <div className="bg-white min-h-screen">
+      {/* Top Bar */}
+      <div className="bg-white">
+        {/* Logo */}
+        <img src={Logo} alt="Auction Finder Logo" className="w-25 mx-auto py-3" />
+        {/* Navigation Panel */}
+        <div className="wrap items-center text-center max-w-4xl mx-auto">
+          <div className="justify-center">
+            <Link to="/">
+              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-gray-300 hover:bg-gray-100 font-bold">
+                Main
+              </button>
+            </Link>
+            <Link to="/auction/:id">
+              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-red-400 hover:bg-red-100 font-bold">
+                Auction Details
+              </button>
+            </Link>
+            <Link to="/search">
+              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-blue-400 hover:bg-blue-100 font-bold">
+                Search for cards
+              </button>
+            </Link>
+            <Link to="/login">
+              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-green-400 hover:bg-green-100 font-bold">
+                Log in
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* App Routes */}
-      <div className="mt-8">
+      {/* Main Content */}
+      <div className="flex-grow mt-8">
         <Routes>
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
@@ -80,7 +83,6 @@ function App() {
         </Routes>
       </div>
     </div>
-
   );
 }
 
