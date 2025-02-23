@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion"; // ✅ Import Framer Motion
 import axios from "axios";
+import { calculateTimeLeft } from "../utils/timeUtils.tsx"; // ✅ Import the function
 
 // Define the Auction details type
 interface AuctionDetail {
@@ -10,6 +11,7 @@ interface AuctionDetail {
     HighestBid: number;
     CardName: string;
     ImageURL: string;
+    EndTime: number;
 }
 
 // Define the bid request type
@@ -25,6 +27,11 @@ const BiddingPage: React.FC = () => {
     const [bidAmount, setBidAmount] = useState<string>("");
     const [message, setMessage] = useState<string>("");
     const [showLoginPopup, setShowLoginPopup] = useState(false); // ✅ New state for login popup
+    const [timer, setTimer] = useState<{ expired: boolean; timeLeft: string }>({
+        expired: false,
+        timeLeft: "Loading..."
+      }); // ✅ Store timers
+
 
     useEffect(() => {
         if (auctionID) {
@@ -42,6 +49,22 @@ const BiddingPage: React.FC = () => {
             console.error("Error fetching auction details:", error);
         }
     };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+          setTimer((prevTimer) => {
+            let newTimer = { ...prevTimer };
+            if (auction) {
+              newTimer = calculateTimeLeft(auction.EndTime); // ✅ Updates only this auction
+            }
+            return newTimer;
+          });
+        }, 1000); // ✅ Updates every second
+      
+        return () => clearInterval(interval); // ✅ Cleanup interval on unmount
+      }, [auction]); // ✅ Only re-run if `auction` changes
+      
+
 
     const handleBidChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setBidAmount(event.target.value);
@@ -128,6 +151,18 @@ const BiddingPage: React.FC = () => {
                     <p><strong>📜 Status:</strong> {auction.Status}</p>
                     <p><strong>💰 Highest Bid:</strong> ${auction.HighestBid}</p>
                     <p><strong>🎴 Card Name:</strong> {auction.CardName}</p>
+                                    {/* Countdown Timer */}
+                    <p style={{
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: timer.expired 
+                        ? "red" 
+                        : (parseInt(timer.timeLeft) > 86400) // ✅ Less than 1 day (86400 seconds)
+                            ? "yellow" 
+                            : "#FFD700"
+                    }}>
+                        ⏳ {timer.expired ? "Auction Ended" : `Time Left: ${timer.timeLeft}`}
+                    </p>
                 </div>
             </motion.div>
 

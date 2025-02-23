@@ -32,6 +32,7 @@ class AuctionService:
                 Auction.AuctionID,
                 Auction.CardID,
                 Auction.Status,
+                Auction.EndTime,
                 Auction.HighestBid,
                 Card.IsValidated,
                 Card.CardName,
@@ -39,13 +40,13 @@ class AuctionService:
                 Auction.ImageURL  # Ensure this is the correct field in `Card)
             )
             .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            # .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired
+            # .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired to add back
             .order_by(Auction.EndTime)  # Sort by earliest expiration
             .offset(offset)
             .limit(page_size)
             .all()
         )
-        return [dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
+        return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
     def get_auctions_details(self, auction_id: int):
         """
@@ -56,6 +57,7 @@ class AuctionService:
             Auction.AuctionID,
             Auction.CardID,
             Auction.Status,
+            Auction.EndTime,
             Auction.HighestBid,
             Card.IsValidated,
             Card.CardName,
@@ -67,7 +69,7 @@ class AuctionService:
             .first()
         )
         print(query_result)
-        auction_indiv = dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
+        auction_indiv = dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
         if not auction_indiv:
             raise HTTPException(status_code=404, detail="Auction not found")
         return auction_indiv
@@ -78,8 +80,10 @@ class AuctionService:
             """
             Get total page of auctions
             """
-            current_date = datetime.today().date() # assume endtime is a date
-            available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()
+            current_date = datetime.utcnow().isoformat()  # ✅ Returns "YYYY-MM-DDTHH:MM:SS.ssssss"
+            print(current_date)
+            available_auction = self.db.query(Auction).all()
+            # available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()  # to add back
             return len(available_auction) // 10 + 1
     
     def get_auction_by_id(self, auction_id: int):

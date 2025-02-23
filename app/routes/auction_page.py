@@ -32,11 +32,14 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
     total_pages =  auction_service.get_total_page()
     print(auctions)
     print(total_pages)
-    return {"auctions": auctions, "total_pages": total_pages}
+    for auction in auctions:
+        auction["EndTime"] = auction["EndTime"].timestamp()
+    return {"auctions": auctions, "total_pages": int(total_pages)}
 
 @router.get("/auction-details/{auction_id}")
 async def display_auction_details(auction_id:int, auction_service: AuctionService = Depends(get_auction_service)):
     auction = auction_service.get_auctions_details(auction_id)
+    auction["EndTime"] = auction["EndTime"].timestamp()
     if not auction:
         raise HTTPException(status_code=404, detail="Auction not found")
     return auction

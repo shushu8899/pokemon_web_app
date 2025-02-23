@@ -14,7 +14,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   };
 
   return (
-    <main className="wrap max-w-2xl mx-auto bg-white text-center">
+    <main className="wrap max-w-2xl mx-auto text-center">
       <input 
         type="text" 
         value={query} 
@@ -22,7 +22,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         placeholder="Search for cards or profiles" 
         className="search-bar"
       />
-      <button onClick={handleSearch} className="p-2 text-black rounded">
+      <button onClick={handleSearch} className="p-2 text-yellow rounded">
         Search
       </button>
     </main>

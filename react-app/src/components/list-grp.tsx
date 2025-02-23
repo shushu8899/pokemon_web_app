@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FloatingPokemon from "./FloatingPokemon";
+import RunningPokemon from "./RunningPokemon";
+import { calculateTimeLeft } from "../utils/timeUtils.tsx"; // ✅ Import the function
+
+
 
 // Define the Auction type based on FastAPI response
 interface Auction {
@@ -14,6 +18,7 @@ interface Auction {
   CardName: string;
   CardQuality: string;
   ImageURL: string;
+  EndTime: number;
 }
 
 const AuctionList: React.FC = () => {
@@ -21,6 +26,7 @@ const AuctionList: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [inputPage, setInputPage] = useState<string>("");
+  const [timers, setTimers] = useState<{ [key: number]: { expired: boolean; timeLeft: string } }>({}); // ✅ Store timers
   const navigate = useNavigate();
 
   const fetchAuctions = async (pageNumber: number) => {
@@ -28,6 +34,7 @@ const AuctionList: React.FC = () => {
       const response = await axios.get<{ auctions: Auction[]; total_pages: number }>(
         `http://127.0.0.1:8000/bidding/auction-collection?page=${pageNumber}`
       );
+      console.log("API Response in React:", response.data); // ✅ Log response
       setAuctions(response.data.auctions);
       setTotalPages(response.data.total_pages);
     } catch (error) {
@@ -38,6 +45,20 @@ const AuctionList: React.FC = () => {
   useEffect(() => {
     fetchAuctions(page);
   }, [page]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimers((prevTimers) => {
+        const newTimers = { ...prevTimers };
+        auctions.forEach((auction) => {
+          newTimers[auction.AuctionID] = calculateTimeLeft(auction.EndTime); // ✅ Uses fixed function
+        });
+        return newTimers;
+      });
+    }, 1000); // ✅ Updates every second
+  
+    return () => clearInterval(interval); // ✅ Cleanup interval on unmount
+  }, [auctions]);
 
   const handlePageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputPage(event.target.value);
@@ -52,9 +73,6 @@ const AuctionList: React.FC = () => {
     }
   };
 
-  const goToBiddingPage = (auctionID: number) => {
-    navigate(`/bidding/${auctionID}`);
-  };
 
   return (
     <div style={{ padding: "20px", textAlign: "center", backgroundColor: "#001f3f", minHeight: "100vh" }}>
@@ -68,17 +86,22 @@ const AuctionList: React.FC = () => {
       {/* Auction Grid */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)", // Two Pokémon per row
-        gap: "25px", // Increased gap for better spacing
+        gridTemplateColumns: "repeat(3, 1fr)", // Two Pokémon per row
+        gap: "10px", // Increased gap for better spacing
+        borderRadius: "12px", // ✅ Optional rounded corners
         justifyContent: "center",
-        padding: "20px"
+        padding: "20px",
+        border: "20px solidrgba(255, 213, 4, 0.61)"
       }}>
-        {auctions.length > 0 ? (
-          auctions.map((auction) => (
+
+          {auctions.length > 0 ? auctions.map((auction) => {
+            const auctionTimer = timers[auction.AuctionID] || { expired: false, timeLeft: "Loading..." };
+          
+            return (
             <div key={auction.AuctionID} style={{
               border: "2px solid #FFD700",
               borderRadius: "12px",
-              padding: "0px",
+              padding: "10px",
               textAlign: "center",
               backgroundColor: "#003366",
               boxShadow: "4px 4px 12px rgba(255, 215, 0, 0.2)",
@@ -92,9 +115,27 @@ const AuctionList: React.FC = () => {
               transform: "scale(0.8)", // Initial scale
               transformOrigin: "center", // Scale from center
             }}
-              onClick={() => goToBiddingPage(auction.AuctionID)}
-              onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-              onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
+
+            onClick={() => {
+              if (!auctionTimer.expired) {
+                navigate(`/bidding/${auction.AuctionID}`);
+              }
+            }} // ✅ Prevents navigation when expired
+            
+            onMouseOver={(e) => {
+              if (!auctionTimer.expired) {
+                e.currentTarget.style.transform = "scale(1)";
+              } else {
+                e.currentTarget.style.transform = "scale(0.8)"; // ✅ Ensures expired items stay the same
+              }
+            }}
+            
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = "scale(0.8)"; // ✅ Always reverts to original size
+            }}
+            
+            className="glowing-box"
+            
             >
               {/* Pokémon Image (70% height of card) */}
               <div style={{ flex: "70%", overflow: "hidden", display: "flex", justifyContent: "center" }}>
@@ -102,7 +143,6 @@ const AuctionList: React.FC = () => {
                   src={auction.ImageURL}
                   alt={auction.CardName}
                   className="pokemon-image"
-                  onClick={() => goToBiddingPage(auction.AuctionID)}
                 />
               </div>
 
@@ -110,7 +150,6 @@ const AuctionList: React.FC = () => {
               <div style={{
                 flex: "10%",
                 padding: "10px",
-                borderTop: "2px solid #FFD700",
                 fontSize: "8px",
                 lineHeight: "0.3", // Reduced line height for compact text
                 textAlign: "left",
@@ -119,10 +158,23 @@ const AuctionList: React.FC = () => {
                 <p><strong>🔹 ID:</strong> {auction.AuctionID}</p>
                 <p><strong>🏆 Card Name:</strong> {auction.CardName}</p>
                 <p><strong>💰 Highest Bid:</strong> ${auction.HighestBid}</p>
+
+                {/* Countdown Timer */}
+                <p style={{
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    color: auctionTimer.expired 
+                      ? "red" 
+                      : (parseInt(auctionTimer.timeLeft) > 86400) // ✅ Less than 1 day (86400 seconds)
+                        ? "yellow" 
+                        : "#FFD700"
+                  }}>
+                    ⏳ {auctionTimer.expired ? "Auction Ended" : `Time Left: ${auctionTimer.timeLeft}`}
+                </p>
               </div>
             </div>
-          ))
-        ) : (
+          )
+      }) : (
           <p style={{ color: "#FFD700", fontSize: "18px", textAlign: "center", fontWeight: "bold" }}>
             No Pokémon auctions available.
           </p>

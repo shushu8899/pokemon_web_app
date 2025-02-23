@@ -42,29 +42,29 @@ import { fetchSearchResults } from "./services/searchpage-service";
 
 function App() {
   return (
-    <div className="max-w-2xl bg-white">
+    <div className="max-w-2xl">
       {/* Logo */}
       <img src={Logo} alt="Auction Finder Logo" className="w-10 mb-1 mx-auto py-2" />
       {/* Navigation Panel */}
-      <div className="items-center text-center bg-white">
+      <div className="items-center text-center ">
         <div className= "space-y-2">
           <Link to="/">
-            <button className="w-full px-4 py-2 text-black bold-text">
+            <button className="w-full px-4 py-2 text-yellow bold-text">
               Main
             </button>
           </Link>
           <Link to="/auction/:id">
-            <button className="w-full px-4 py-2 text-black bold-text">
+            <button className="w-full px-4 py-2 text-yellow bold-text">
               Auction Details
             </button>
           </Link>
           <Link to="/search">
-            <button className="w-full px-4 py-2 text-black bold-text">
+            <button className="w-full px-4 py-2 text-yellow bold-text">
               Search for cards
             </button>
           </Link>
           <Link to="/login">
-            <button className="w-full px-4 py-2 text-black bold-text">
+            <button className="w-full px-4 py-2 text-yellow bold-text">
               Log in
             </button>
           </Link>
