@@ -27,5 +27,29 @@ class SearchService:
         Search for auctions based on the search query
         """
         search_pattern = f"%{search_query}%"
-        return self.db.query(Auction).filter(Auction.AuctionName.like(search_pattern)).all()
+        return self.db.query(Auction).filter(Auction.AuctionID.like(search_pattern)).all()
+    
+    def get_card_counts(self, search_query: str):
+        """
+        Get all cards
+        """
+        search_pattern = f"%{search_query}%"
+        total_cards = self.db.query(Card).filter(Card.CardName.like(search_pattern)).count()
+        return total_cards
+    
+    def get_profile_counts(self, search_query: str):
+        """
+        Get all profiles
+        """
+        search_pattern = f"%{search_query}%"
+        total_profiles = self.db.query(Profile).filter(Profile.Username.like(search_pattern)).count()
+        return total_profiles
+    
+    def get_auction_counts(self, search_query: str):
+        """
+        Get all auctions
+        """
+        search_pattern = f"%{search_query}%"
+        total_auctions = self.db.query(Auction).filter(Auction.AuctionID.like(search_pattern)).count()
+        return total_auctions
 

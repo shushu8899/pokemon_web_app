@@ -17,7 +17,8 @@ set "replace1=from app.db.db import Base"
 set "replace2=from app.models.auction import Auction"
 set "replace3=from app.models.card import Card"
 set "replace4=from app.models.profile import Profile"
-set "replace5=target_metadata = Base.metadata"
+set "replace5=from app.models.notifications import Notification"
+set "replace6=target_metadata = Base.metadata"
 
 :: Clear tempfile
 echo. > %tempfile%
@@ -31,6 +32,7 @@ echo. > %tempfile%
         echo %replace3%>>%tempfile%
         echo %replace4%>>%tempfile%
         echo %replace5%>>%tempfile%
+        echo %replace6%>>%tempfile%
     ) else (
         echo !line!>>%tempfile%
     )

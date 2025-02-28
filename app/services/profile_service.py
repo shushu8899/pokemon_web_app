@@ -62,9 +62,9 @@ class ProfileService:
         Delete a profile by Username - Admin Only
         """
 
-        profile = self.get_profile_username(username)
-        if not profile:
-            return False
-        self.db.delete(profile)
-        self.db.commit()
-        return True
+        username = self.db.query(Profile).filter(Profile.Username == username).first()
+        if username:
+            self.db.delete(username)
+            self.db.commit()
+            return True
+        return False
