@@ -22,7 +22,7 @@ class Auction(Base):
     MinimumIncrement = Column(Float, nullable=False, default=0.01)
     Status = Column(VARCHAR, nullable=False, default="In Progress")
     EndTime = Column(DateTime, nullable=False)
-    HighestBidderID = Column(Integer, nullable=False)
+    HighestBidderID = Column(Integer, ForeignKey("profiles.UserID"), nullable=True)  # Allow NULL values
     HighestBid = Column(Float, nullable=False)
     ImageURL = Column(VARCHAR, nullable=False)
     
@@ -43,7 +43,7 @@ class AuctionBase(BaseModel):
     MinimumIncrement: float = Field(..., gt=0, description="The minimum increment should be greater than 0.")
     EndTime: datetime = Field(..., description="End time must be a valid datetime.")
     Status: str
-    HighestBidderID: int
+    HighestBidderID: Optional[int]
     HighestBid: float
     ImageURL: str
 

@@ -11,8 +11,12 @@ from app.models.auction import Auction, AuctionInfo, AuctionBid
 from app.models.notifications import Notification
 from app.services.profile_service import ProfileService
 from datetime import datetime, timezone
-from fastapi import HTTPException, BackgroundTasks
-
+from fastapi import HTTPException, BackgroundTasks, UploadFile
+import os
+import shutil
+import uuid
+from datetime import datetime, timedelta
+import logging
 from typing import Union
 
 
@@ -72,15 +76,13 @@ class AuctionService:
             raise HTTPException(status_code=404, detail="Auction not found")
         return auction_indiv
 
-
-
     def get_total_page(self):
-            """
-            Get total page of auctions
-            """
-            current_date = datetime.today().date() # assume endtime is a date
-            available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()
-            return len(available_auction) // 10 + 1
+        """
+        Get total page of auctions
+        """
+        current_date = datetime.today().date() # assume endtime is a date
+        available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()
+        return len(available_auction) // 10 + 1
     
     def get_auction_by_id(self, auction_id: int):
         """
@@ -88,21 +90,79 @@ class AuctionService:
         """
         return self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
 
-    def add_auction(self, card_id: int, auction_data: AuctionInfo):
-        """
-        Add a new Auction
-        """
-        # Check if Card Exists
-        card = self.db.query(Card).filter(Card.CardID == card_id,).first()
-        if not card:
-            return None
-        new_auction = Auction(
-            CardID=card.CardID, SellerID=card.OwnerID, **auction_data.model_dump()
-        )
-        self.db.add(new_auction)
+    def create_auction(self, file: UploadFile, card_name: str, card_quality: str, is_validated: bool, starting_bid: float, minimum_increment: float, auction_duration: float, user_id: int):
+        '''Generate a unique filename using UUID to ensure no conflict in filenames'''
+        unique_filename = f"{uuid.uuid4()}_{file.filename}"
+        file_path = os.path.join("static/uploads", unique_filename)
+        
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            logging.debug(f"File saved successfully to: {file_path}")
+        except Exception as e:
+            logging.error(f"Failed to save file: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+        '''Create card record'''
+        card = Card(CardName=card_name,
+                    CardQuality=card_quality,
+                    OwnerID=user_id,  # Use the user_id obtained from the profiles table
+                    IsValidated=is_validated)
+        self.db.add(card)
         self.db.commit()
-        self.db.refresh(new_auction)
-        return new_auction
+        self.db.refresh(card)
+
+        '''Calculate the end time of the auction'''
+        end_time = datetime.now() + timedelta(hours=auction_duration)
+
+        # Validate the end time
+        if end_time <= datetime.now():
+            raise HTTPException(status_code=400, detail="End Time must be later than the current time!")
+
+        # Validate the starting bid
+        if starting_bid <= 0:
+            raise HTTPException(status_code=400, detail="Starting bid must be greater than zero!")
+
+        # Validate the minimum increment
+        if minimum_increment <= 0:
+            raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
+
+        '''Create auction record'''
+        auction_data = Auction(
+            CardID=card.CardID,
+            CardName=card_name,
+            SellerID=card.OwnerID,
+            MinimumIncrement=minimum_increment,
+            EndTime=end_time,
+            Status="In Progress" if end_time > datetime.now() else "Ended",
+            HighestBidderID=None,  # Set to None initially
+            HighestBid=starting_bid,
+            ImageURL=f"{file_path}"
+        )
+
+        self.db.add(auction_data)
+        self.db.commit()
+        self.db.refresh(auction_data)
+
+        return auction_data
+    
+    def delete_auction(self, auction_id: int, user_id: int):
+        """
+        Delete an auction by its ID if the user is the seller
+        """
+        # Check if auction exists
+        auction = self.get_auction_by_id(auction_id)
+        if not auction:
+            raise HTTPException(status_code=404, detail="Auction not found")
+
+        # Check if the user is the seller
+        if auction.SellerID != user_id:
+            raise HTTPException(status_code=403, detail="You do not have permission to delete this auction")
+
+        # Delete the auction
+        self.db.delete(auction)
+        self.db.commit()
+        return {"message": "Auction deleted successfully"}
 
     def update_auction(self, auction_id: int, user_id: int, update_info: AuctionInfo):
         """
@@ -230,3 +290,8 @@ class AuctionService:
     def schedule_auction_cleanup(background_tasks: BackgroundTasks, db: Session):
         auction_service = AuctionService(db)
         background_tasks.add_task(auction_service.end_expired_auctions)
+
+
+
+
+

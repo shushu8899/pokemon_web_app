@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 
 from fastapi import APIRouter, Form, File, UploadFile, HTTPException, status, Depends
-from app.models.auction import Auction, AuctionResponse, AuctionInfo
-from app.models.card import Card
+from app.models.auction import AuctionResponse
+from app.models.profile import ProfileInfo, ProfileResponse
 from app.services.auction_service import AuctionService
-from app.dependencies.services import get_auction_service
+from app.services.profile_service import ProfileService, get_current_user
+from app.dependencies.services import get_auction_service, get_profile_service
 from app.dependencies.auth import req_user_role
-from starlette.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-from datetime import datetime, timedelta
-import shutil
-import os
-import uuid
-import logging
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from pydantic import ValidationError
+import os  # Import the os module
 
 router = APIRouter()
 
@@ -44,64 +39,17 @@ def create_auction(
     minimum_increment: float = Form(...),
     auction_duration: float = Form(...),
     service: AuctionService = Depends(get_auction_service),
-    db: Session = Depends(get_db)
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
 ):
-        
-    '''Generate a unique filename using UUID to ensure no conflict in filenames'''
-    unique_filename = f"{uuid.uuid4()}_{file.filename}"
-    file_path = os.path.join(IMAGE_DIR, unique_filename)
-    
+    cognito_id = auth_info.get("sub")
+    user_id = profile_service.get_profile_id(cognito_id)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        logging.debug(f"File saved successfully to: {file_path}")
-    except Exception as e:
-        logging.error(f"Failed to save file: {str(e)}")
-        print("500 was raised")
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-
-    '''Create card record'''
-    card = Card(CardName=card_name,
-                CardQuality=card_quality,
-                OwnerID=1, # Dummy owner ID for now
-                IsValidated=is_validated)
-    db.add(card)
-    db.commit()
-    db.refresh(card)
-
-    '''Calculate the end time of the auction'''
-    end_time = datetime.now() + timedelta(hours=auction_duration)
-
-    # Validate the end time
-    if end_time <= datetime.now():
-        raise HTTPException(status_code=400, detail="End Time must be later than the current time!")
-
-    # Validate the starting bid
-    if starting_bid <= 0:
-        raise HTTPException(status_code=400, detail="Starting bid must be greater than zero!")
-
-    # Validate the minimum increment
-    if minimum_increment <= 0:
-        raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
-
-    '''Create auction record'''
-    auction_data = Auction(
-        CardID=card.CardID,
-        CardName=card_name,
-        SellerID=card.OwnerID,
-        MinimumIncrement=minimum_increment,
-        EndTime=end_time,
-        Status="In Progress", # Dummy status for now
-        HighestBidderID=2, # Dummy bidder ID for now
-        HighestBid=starting_bid, # Dummy starting bid for now. Should replace when the auction page comes in.
-        ImageURL=f"{file_path}"
-    )
-
-    db.add(auction_data)
-    db.commit()
-    db.refresh(auction_data)
-    
-    try:
+        auction_data = service.create_auction(file, card_name, card_quality, is_validated, starting_bid, minimum_increment, auction_duration, user_id)
         return {
             "AuctionID": auction_data.AuctionID,
             "CardID": auction_data.CardID,
@@ -116,3 +64,16 @@ def create_auction(
         }
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=f"Response validation error: {e.errors()}")
+
+@router.delete("/delete-all-auctions", dependencies=[Depends(req_user_role)])
+def delete_all_auctions(
+    service: AuctionService = Depends(get_auction_service),
+    db: Session = Depends(get_db)
+):
+    try:
+        result = service.delete_all_auctions()
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
