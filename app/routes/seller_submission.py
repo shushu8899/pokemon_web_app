@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from fastapi import APIRouter, Form, File, UploadFile, HTTPException, status, Depends
-from app.models.auction import AuctionResponse
+from app.models.auction import AuctionResponse, AuctionInfo
 from app.models.profile import ProfileInfo, ProfileResponse
 from app.services.auction_service import AuctionService
 from app.services.profile_service import ProfileService, get_current_user
@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.db import get_db
 from pydantic import ValidationError
 import os  # Import the os module
+from typing import List
 
 router = APIRouter()
 
@@ -65,7 +66,57 @@ def create_auction(
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=f"Response validation error: {e.errors()}")
 
-@router.delete("/delete-all-auctions", dependencies=[Depends(req_user_role)])
+@router.get("/my-auctions", response_model=List[int], dependencies=[Depends(req_user_role)])
+def get_my_auctions(
+    auth_info: dict = Depends(get_current_user),
+    service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db)
+):
+    cognito_id = auth_info.get("sub")
+    user_id = profile_service.get_profile_id(cognito_id)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        auctions = service.get_auctions_by_seller(user_id)
+        auction_ids = [auction.AuctionID for auction in auctions]
+        return auction_ids
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/update-auction/{auction_id}", response_model=AuctionResponse, dependencies=[Depends(req_user_role)])
+def update_auction(
+    auction_id: int,
+    file: UploadFile = File(...),
+    card_name: str = Form(...),
+    card_quality: str = Form(...),
+    is_validated: bool = Form(...),
+    starting_bid: float = Form(...),
+    minimum_increment: float = Form(...),
+    auction_duration: float = Form(...),
+    auth_info: dict = Depends(get_current_user),
+    service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db)
+):
+    cognito_id = auth_info.get("sub")
+    try:
+        updated_auction = service.update_auction(auction_id, cognito_id, file, card_name, card_quality, is_validated, starting_bid, minimum_increment, auction_duration, profile_service)
+        if not updated_auction:
+            raise HTTPException(status_code=404, detail="Auction not found or you do not have permission to update this auction")
+        return updated_auction
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+'''
+Temporary endpoint to delete all auctions
+'''
+
+@router.delete("/delete-all-auctions-do-not-use", dependencies=[Depends(req_user_role)])
 def delete_all_auctions(
     service: AuctionService = Depends(get_auction_service),
     db: Session = Depends(get_db)
