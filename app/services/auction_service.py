@@ -23,7 +23,7 @@ class AuctionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_auctions_by_page(self, page:int,page_size: int = 10):
+    def get_auctions_by_page(self, page:int, page_size: int = 10):
         """
         Get auctions by page limited to 10 auctions per page
         Display the expiring auctions first
@@ -36,6 +36,7 @@ class AuctionService:
                 Auction.CardID,
                 Auction.Status,
                 Auction.HighestBid,
+                Auction.EndTime,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
@@ -48,7 +49,25 @@ class AuctionService:
             .limit(page_size)
             .all()
         )
-        return [dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
+
+        # Update the status of each auction based on the current datetime
+        current_time = datetime.now()
+        for row in query_result:
+            auction = self.db.query(Auction).filter(Auction.AuctionID == row.AuctionID).first()
+            if current_time > auction.EndTime:
+                auction.Status = "Closed"
+            else:
+                auction.Status = "In Progress"
+            self.db.commit()
+            self.db.refresh(auction)
+
+        # Filter out auctions with status "Closed"
+        filtered_result = [row for row in query_result if row.Status != "Closed"]
+
+        # Sort the results by EndTime
+        sorted_result = sorted(filtered_result, key=lambda x: x.EndTime)
+
+        return [dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "EndTime", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in sorted_result]
 
     def get_auctions_details(self, auction_id: int):
         """
@@ -60,6 +79,7 @@ class AuctionService:
             Auction.CardID,
             Auction.Status,
             Auction.HighestBid,
+            Auction.EndTime,
             Card.IsValidated,
             Card.CardName,
             Card.CardQuality,
@@ -69,10 +89,21 @@ class AuctionService:
             .filter(Auction.AuctionID == auction_id) 
             .first()
         )
-        print(query_result)
-        auction_indiv = dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
-        if not auction_indiv:
+        
+        if not query_result:
             raise HTTPException(status_code=404, detail="Auction not found")
+
+        # Update the status of the auction based on the current datetime
+        current_time = datetime.now()
+        auction = self.db.query(Auction).filter(Auction.AuctionID == query_result.AuctionID).first()
+        if current_time > auction.EndTime:
+            auction.Status = "Closed"
+        else:
+            auction.Status = "In Progress"
+        self.db.commit()
+        self.db.refresh(auction)
+
+        auction_indiv = dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "EndTime", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
         return auction_indiv
 
     def get_total_page(self):
@@ -235,6 +266,14 @@ class AuctionService:
         auction.EndTime = end_time
         auction.StartingBid = starting_bid
         auction.ImageURL = file_path
+
+        # Compare current datetime vs end time of the auction
+        current_time = datetime.now()
+        if current_time > auction.EndTime:
+            auction.Status = "Closed"
+        else:
+            auction.Status = "In Progress"
+
         self.db.commit()
         self.db.refresh(auction)
 
