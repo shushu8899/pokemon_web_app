@@ -65,6 +65,8 @@ def create_auction(
         }
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=f"Response validation error: {e.errors()}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/my-auctions", response_model=List[int], dependencies=[Depends(req_user_role)])
 def get_my_auctions(
@@ -111,6 +113,26 @@ def update_auction(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.delete("/delete-auction/{auction_id}", dependencies=[Depends(req_user_role)])
+def delete_auction(
+    auction_id: int,
+    auth_info: dict = Depends(get_current_user),
+    service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db)
+):
+    cognito_id = auth_info.get("sub")
+    user_id = profile_service.get_profile_id(cognito_id)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        result = service.delete_auction(auction_id, user_id)
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 '''
 Temporary endpoint to delete all auctions
