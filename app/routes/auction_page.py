@@ -34,12 +34,19 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
     print(total_pages)
     return {"auctions": auctions, "total_pages": total_pages}
 
-@router.get("/auction-details/{auction_id}")
-async def display_auction_details(auction_id:int, auction_service: AuctionService = Depends(get_auction_service)):
-    auction = auction_service.get_auctions_details(auction_id)
-    if not auction:
-        raise HTTPException(status_code=404, detail="Auction not found")
-    return auction
+@router.get("/auction-details/{auction_id}", response_model=dict)
+def display_auction_details(
+    auction_id: int,
+    service: AuctionService = Depends(get_auction_service),
+    db: Session = Depends(get_db)
+):
+    try:
+        auction_details = service.get_auctions_details(auction_id)
+        return auction_details
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/place-bid/{auction_id}", response_model=AuctionResponse, dependencies=[Depends(req_user_role)])
 async def place_bid(
