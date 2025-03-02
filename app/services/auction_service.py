@@ -23,15 +23,15 @@ class AuctionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_auctions_by_page(self, page:int, page_size: int = 10):
+    def get_auctions_by_page(self, page: int, page_size: int = 10):
         """
         Get auctions by page limited to 10 auctions per page
         Display the expiring auctions first
         """
-        current_date = datetime.today().date() # assume endtime is a date
+        current_date = datetime.today().date()  # assume endtime is a date
         offset = (page - 1) * page_size  # Pagination offset
         query_result = (
-            self.db.query(            
+            self.db.query(
                 Auction.AuctionID,
                 Auction.CardID,
                 Auction.Status,
@@ -40,7 +40,7 @@ class AuctionService:
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
-                Auction.ImageURL  # Ensure this is the correct field in `Card)
+                Card.ImageURL,  # Include ImageURL from Card
             )
             .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
             .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired
@@ -67,35 +67,35 @@ class AuctionService:
         # Sort the results by EndTime
         sorted_result = sorted(filtered_result, key=lambda x: x.EndTime)
 
-        return [dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "EndTime", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in sorted_result]
+        return [
+            dict(
+                zip(
+                    [
+                        "AuctionID",
+                        "CardID",
+                        "HighestBid",
+                        "EndTime",
+                        "IsValidated",
+                        "CardName",
+                        "CardQuality",
+                        "ImageURL",
+                    ],
+                    row,
+                )
+            )
+            for row in sorted_result
+        ]
 
     def get_auctions_details(self, auction_id: int):
         """
-        Get auctions by auction id for bidding
+        Get auction details by auction ID
         """
-        query_result = ( 
-            self.db.query(            
-            Auction.AuctionID,
-            Auction.CardID,
-            Auction.Status,
-            Auction.HighestBid,
-            Auction.EndTime,
-            Card.IsValidated,
-            Card.CardName,
-            Card.CardQuality,
-            Auction.ImageURL  # Ensure this is the correct field in `Card)
-            )
-            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            .filter(Auction.AuctionID == auction_id) 
-            .first()
-        )
-        
-        if not query_result:
+        auction = self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
+        if not auction:
             raise HTTPException(status_code=404, detail="Auction not found")
 
         # Update the status of the auction based on the current datetime
         current_time = datetime.now()
-        auction = self.db.query(Auction).filter(Auction.AuctionID == query_result.AuctionID).first()
         if current_time > auction.EndTime:
             auction.Status = "Closed"
         else:
@@ -103,8 +103,26 @@ class AuctionService:
         self.db.commit()
         self.db.refresh(auction)
 
-        auction_indiv = dict(zip(["AuctionID", "CardID", "Status", "HighestBid", "EndTime", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
-        return auction_indiv
+        card = self.db.query(Card).filter(Card.CardID == auction.CardID).first()
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+
+        auction_details = {
+            "AuctionID": auction.AuctionID,
+            "CardID": auction.CardID,
+            "SellerID": auction.SellerID,
+            "MinimumIncrement": auction.MinimumIncrement,
+            "EndTime": auction.EndTime,
+            "Status": auction.Status,
+            "HighestBidderID": auction.HighestBidderID,
+            "HighestBid": auction.HighestBid,
+            "CardName": card.CardName,
+            "CardQuality": card.CardQuality,
+            "IsValidated": card.IsValidated,
+            "ImageURL": card.ImageURL  # Use the ImageURL from the card
+        }
+
+        return auction_details
 
     def get_total_page(self):
         """
