@@ -50,7 +50,7 @@ const FloatingPokemon: React.FC = () => {
           <img
             src={pokemon.sprite}
             alt={pokemon.name}
-            style={{ width: "450px", height: "100px" }}
+            style={{ width: "100px", height: "100px" }}
           />
           <p style={{ fontSize: "18px", fontWeight: "bold", height: "10px", padding: "3px"}}>Let's get you a Pokémon today!</p>
         </motion.div>

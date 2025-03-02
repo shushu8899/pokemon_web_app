@@ -72,8 +72,19 @@ const AuctionList: React.FC = () => {
 
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <h1>Pokémon Auction House</h1>
+    
+    <div style={{ textAlign: "center"}}>
+      <h1 
+        className="font-roboto justify-center p-8 mt-8 mx-8"
+        style = {{
+          fontSize: "36px",
+          fontWeight: "bold",
+          borderRadius: "30px",
+          border: "2px solid #FFCB05",
+
+        }}
+      
+      >Pokémon Auction House</h1>
       <div style={{ padding: "20px", textAlign: "center", minHeight: "100vh" }}>
         {/* Floating Pokémon that moves & displays message */}
         <FloatingPokemon />
@@ -180,7 +191,7 @@ const AuctionList: React.FC = () => {
             onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
             disabled={page === 1}
             className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
-            style={{ marginLeft: "10px" }}
+            style={{ marginLeft: "10px", backgroundColor: "#FFCB05", color: "black" }}
           >
             Previous
           </button>
@@ -193,7 +204,7 @@ const AuctionList: React.FC = () => {
             onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={page === totalPages}
             className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
-            style={{ marginLeft: "10px" }}
+            style={{ marginLeft: "10px", backgroundColor: "#FFCB05", color: "black" }}
           >
             Next
           </button>
@@ -211,16 +222,16 @@ const AuctionList: React.FC = () => {
               width: "120px",
               fontSize: "16px",
               textAlign: "left",
-              border: "1px solid #FFD700",
+              border: "1px solid #FFCB05",
               backgroundColor: "white",
-              color: "#FFD700",
+              color: "#FFCB05",
               // borderRadius: "5px"
             }}
           />
           <button
             onClick={goToPage}
-            className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
-            style={{ marginLeft: "10px"}}
+            className="p-2 text-black rounded"
+            style={{ marginLeft: "10px", backgroundColor: "#FFCB05", color: "black" }}
           >
             Go
           </button>

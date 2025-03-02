@@ -1,9 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 @import "tailwindcss";
-img {
-    max-width: 15%;
-    height: 50%;
-    display: block;
-  }
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
+}
 
 /* Custom bold text */
 .bold-text {
@@ -11,7 +11,7 @@ img {
 }
 
 h1 {
-    font-size: 2.5rem;
+    /* font-size: 2.5rem; */
     font-weight: bold;
     text-align: center;
 }
