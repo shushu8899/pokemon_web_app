@@ -11,66 +11,40 @@ import SearchPage from "./components/SearchPage";
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
 
-// Type definition for search results
-// interface SearchResult {
-//   id: string;
-//   CardName?: string;
-//   Username?: string;
-// }
-
-// // Function to fetch search results
-// const fetchSearchResults = async (
-//   query: string,
-//   setResults: (results: SearchResult[]) => void,
-//   setLoading: (loading: boolean) => void
-// ) => {
-//   setLoading(true);
-//   try {
-//     const [cardResponse, profileResponse] = await Promise.all([
-//       axios.get(`http://localhost:8000/search/cards?search_query=${query}`),
-//       axios.get(`http://localhost:8000/search/profiles?search_query=${query}`)
-//     ]);
-
-//     // Combine both results
-//     setResults([...cardResponse.data, ...profileResponse.data]);
-//   } catch (error) {
-//     console.error("Error during search", error);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
 function App() {
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen flex flex-col">
       {/* Top Bar */}
-      <div className="bg-white">
+      <div className="flex items-center w-full px-6 py-3 shadow-md">
         {/* Logo */}
-        <img src={Logo} alt="Auction Finder Logo" className="w-25 mx-auto py-3" />
-        {/* Navigation Panel */}
-        <div className="wrap items-center text-center max-w-4xl mx-auto">
-          <div className="justify-center">
-            <Link to="/">
-              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-gray-300 hover:bg-gray-100 font-bold">
-                Main
-              </button>
-            </Link>
-            <Link to="/auction/:id">
-              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-red-400 hover:bg-red-100 font-bold">
-                Auction Details
-              </button>
-            </Link>
-            <Link to="/search">
-              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-blue-400 hover:bg-blue-100 font-bold">
-                Search for cards
-              </button>
-            </Link>
-            <Link to="/login">
-              <button className="w-25 px-4 py-2 text-black bold-text border-b-4 border-green-400 hover:bg-green-100 font-bold">
-                Log in
-              </button>
-            </Link>
-          </div>
+        <img
+          src={Logo}
+          alt="Auction Finder Logo"
+          className="h-12 flex-shrink-0 mr-4"
+        />
+
+        {/* Navigation Panel*/}
+        <div className="ml-auto space-x-4">
+          <Link to="/">
+            <button className="w-40 py-2 text-black font-bold hover:bg-gray-100" style={{ borderRadius: "100px", border: "1px ", borderColor: "gray" }}>
+              Main
+            </button>
+          </Link>
+          <Link to="/auction/:id">
+            <button className="w-40 py-2 text-black font-bold border-red-400 hover:bg-red-100" style={{ borderRadius: "100px" }}>
+              Auction Details
+            </button>
+          </Link>
+          <Link to="/login">
+            <button className="w-32 py-2 text-black font-bold border-green-400 hover:bg-green-100" style={{ borderRadius: "100px" }}>
+              Account
+            </button>
+          </Link>
+          <Link to="/search">
+            <button className="w-10 py-2 text-black font-bold bg-blue-200" style={{ borderRadius: "100px" }}>
+              {"\u2315"}
+            </button>
+          </Link>
         </div>
       </div>
 

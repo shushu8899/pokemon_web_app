@@ -64,7 +64,7 @@ app.include_router(auth.router, prefix="", tags=["Authentication"])
 app.include_router(card_verification.router, prefix="/verification", tags=["Verification"])
 app.include_router(seller_submission.router, prefix="/auction", tags=["Submission"])
 app.include_router(auction_page.router, prefix="/bidding", tags=["Auction Page"])
-app.include_router(search.router, prefix="/api", tags=["Search"])
+app.include_router(search.router, tags=["Search"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
 
 @app.get("/")

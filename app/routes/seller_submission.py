@@ -16,7 +16,7 @@ import logging
 from sqlalchemy.orm import Session
 from app.db.db import get_db
 from pydantic import ValidationError
-import pandas as pd
+# import pandas as pd
 
 router = APIRouter()
 
@@ -34,10 +34,10 @@ os.makedirs(TEMPLATES_DIR, exist_ok=True)
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 
-pokemon_file =pd.read_csv(r"C:\Users\shuji\OneDrive\Desktop\School\Modern Software Sln\Project\pokemon-cards.csv")
-url_list = pokemon_file['image_url'].tolist()
+# pokemon_file =pd.read_csv(r"C:\Users\shuji\OneDrive\Desktop\School\Modern Software Sln\Project\pokemon-cards.csv")
+# url_list = pokemon_file['image_url'].tolist()
 url_used = set()
-name_list = pokemon_file['name'].tolist()
+# name_list = pokemon_file['name'].tolist()
 name_used = set()
 
 

@@ -70,17 +70,13 @@ const AuctionList: React.FC = () => {
     }
   };
 
-  return (
-    <div style={{ padding: "20px", textAlign: "center" }}>
-      <h1>Live Auctions</h1>
-      <div style={{ padding: "20px", textAlign: "center", backgroundColor: "#001f3f", minHeight: "100vh" }}>
-        <h2 style={{ color: "#FFD700", fontSize: "28px", fontWeight: "bold", marginBottom: "20px" }}>
-          🛒 Pokémon Auction House
-        </h2>
 
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h1>Pokémon Auction House</h1>
+      <div style={{ padding: "20px", textAlign: "center", minHeight: "100vh" }}>
         {/* Floating Pokémon that moves & displays message */}
         <FloatingPokemon />
-
         {/* Auction Grid */}
         <div style={{
           display: "grid",
@@ -88,8 +84,8 @@ const AuctionList: React.FC = () => {
           gap: "10px", // Increased gap for better spacing
           borderRadius: "12px", // ✅ Optional rounded corners
           justifyContent: "center",
-          padding: "20px",
-          border: "20px solid rgba(255, 213, 4, 0.61)"
+
+
         }}>
           {auctions.length > 0 ? auctions.map((auction) => {
             const auctionTimer = timers[auction.AuctionID] || { expired: false, timeLeft: "Loading..." };
@@ -172,7 +168,7 @@ const AuctionList: React.FC = () => {
               </div>
             )
           }) : (
-            <p style={{ color: "#FFD700", fontSize: "18px", textAlign: "center", fontWeight: "bold" }}>
+            <p style={{ color: "gold", fontSize: "18px", fontStyle: "italic", gridColumn: "2 / 3", alignSelf: "center"  }}>
               No Pokémon auctions available.
             </p>
           )}
@@ -189,7 +185,7 @@ const AuctionList: React.FC = () => {
             Previous
           </button>
 
-          <span style={{ margin: "0 15px", color: "#FFD700", fontSize: "18px", fontWeight: "bold" }}>
+          <span style={{ margin: "0 15px", fontSize: "18px", fontWeight: "bold" }}>
             Page {page} of {totalPages}
           </span>
 
@@ -208,22 +204,23 @@ const AuctionList: React.FC = () => {
             value={inputPage}
             onChange={handlePageChange}
             placeholder="Go to page"
+            className="p-2 text-black rounded"
             style={{
               marginLeft: "15px",
-              padding: "8px",
-              width: "80px",
+              // padding: "8px",
+              width: "120px",
               fontSize: "16px",
-              textAlign: "center",
+              textAlign: "left",
               border: "1px solid #FFD700",
-              backgroundColor: "#003366",
+              backgroundColor: "white",
               color: "#FFD700",
-              borderRadius: "5px"
+              // borderRadius: "5px"
             }}
           />
           <button
             onClick={goToPage}
             className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
-            style={{ marginLeft: "10px" }}
+            style={{ marginLeft: "10px"}}
           >
             Go
           </button>
