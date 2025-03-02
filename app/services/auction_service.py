@@ -120,29 +120,25 @@ class AuctionService:
         """
         return self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
 
-    def create_auction(self, file: UploadFile, card_name: str, card_quality: str, is_validated: bool, starting_bid: float, minimum_increment: float, auction_duration: float, user_id: int):
-        '''Generate a unique filename using UUID to ensure no conflict in filenames'''
-        unique_filename = f"{uuid.uuid4()}_{file.filename}"
-        file_path = os.path.join("static/uploads", unique_filename)
-        
-        try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            logging.debug(f"File saved successfully to: {file_path}")
-        except Exception as e:
-            logging.error(f"Failed to save file: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    def create_auction(self, user_id: int, card_id: int, starting_bid: float, minimum_increment: float, auction_duration: float):
+        """
+        Create a new auction
+        """
+        # Check if the card exists and belongs to the user
+        card = self.db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == user_id).first()
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found or you do not have permission to use this card")
 
-        '''Create card record'''
-        card = Card(CardName=card_name,
-                    CardQuality=card_quality,
-                    OwnerID=user_id,  # Use the user_id obtained from the profiles table
-                    IsValidated=is_validated)
-        self.db.add(card)
-        self.db.commit()
-        self.db.refresh(card)
+        # Check if the card is validated
+        if not card.IsValidated:
+            raise HTTPException(status_code=400, detail="Card is not validated and cannot be used for auction")
 
-        '''Calculate the end time of the auction'''
+        # Check if the card is already in an auction with status "In Progress"
+        existing_auction = self.db.query(Auction).filter(Auction.CardID == card_id, Auction.Status == "In Progress").first()
+        if existing_auction:
+            raise HTTPException(status_code=400, detail="Card is already in an auction that is in progress")
+
+        # Calculate the end time of the auction
         end_time = datetime.now() + timedelta(hours=auction_duration)
 
         # Validate the end time
@@ -157,17 +153,15 @@ class AuctionService:
         if minimum_increment <= 0:
             raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
 
-        '''Create auction record'''
+        # Create auction record
         auction_data = Auction(
             CardID=card.CardID,
-            CardName=card_name,
             SellerID=card.OwnerID,
             MinimumIncrement=minimum_increment,
             EndTime=end_time,
             Status="In Progress" if end_time > datetime.now() else "Ended",
             HighestBidderID=None,  # Set to None initially
-            HighestBid=starting_bid,
-            ImageURL=f"{file_path}"
+            HighestBid=starting_bid
         )
 
         self.db.add(auction_data)
@@ -175,7 +169,7 @@ class AuctionService:
         self.db.refresh(auction_data)
 
         return auction_data
-    
+
     def delete_auction(self, auction_id: int, user_id: int):
         """
         Delete an auction by its ID if the user is the seller
@@ -198,9 +192,9 @@ class AuctionService:
         """
         Retrieve auctions by seller ID
         """
-        return self.db.query(Auction).filter(Auction.SellerID == seller_id).all()   
+        return self.db.query(Auction).filter(Auction.SellerID == seller_id).all()
     
-    def update_auction(self, auction_id: int, cognito_user_id: str, file: UploadFile, card_name: str, card_quality: str, is_validated: bool, starting_bid: float, minimum_increment: float, auction_duration: float, profile_service: ProfileService):
+    def update_auction(self, auction_id: int, cognito_user_id: str, minimum_increment: float, starting_bid: float, auction_duration: float, profile_service: ProfileService):
         """
         Update the auction data
         """
@@ -222,29 +216,6 @@ class AuctionService:
         if auction.HighestBidderID is not None:
             raise HTTPException(status_code=403, detail="You cannot update auction because it is already in progress")
 
-        # Generate a unique filename using UUID to ensure no conflict in filenames
-        unique_filename = f"{uuid.uuid4()}_{file.filename}"
-        file_path = os.path.join("static/uploads", unique_filename)
-        
-        try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            logging.debug(f"File saved successfully to: {file_path}")
-        except Exception as e:
-            logging.error(f"Failed to save file: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-
-        # Update the card record
-        card = self.db.query(Card).filter(Card.CardID == auction.CardID).first()
-        if not card:
-            raise HTTPException(status_code=404, detail="Card not found")
-        
-        card.CardName = card_name
-        card.CardQuality = card_quality
-        card.IsValidated = is_validated
-        self.db.commit()
-        self.db.refresh(card)
-
         # Calculate the end time of the auction
         end_time = datetime.now() + timedelta(hours=auction_duration)
 
@@ -261,11 +232,9 @@ class AuctionService:
             raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
 
         # Update the auction record
-        auction.CardName = card_name
         auction.MinimumIncrement = minimum_increment
         auction.EndTime = end_time
         auction.StartingBid = starting_bid
-        auction.ImageURL = file_path
 
         # Compare current datetime vs end time of the auction
         current_time = datetime.now()

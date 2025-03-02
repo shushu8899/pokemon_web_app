@@ -76,7 +76,7 @@ class ProfileService:
             self.db.commit()
             return True
         return False
-
+    
 def get_current_user(auth: HTTPAuthorizationCredentials = Depends(bearer_scheme), cognito_service: CognitoService = Depends(CognitoService)):
     token = auth.credentials
     payload = cognito_service.validate_token(auth)

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 '''
 This file defines the authentication endpoints for the FastAPI application.
 
@@ -31,15 +33,12 @@ import bcrypt
 router = APIRouter()
 cognito_service = CognitoService() #create instance of CognitoService
 
-
 @router.post("/registration", status_code=status.HTTP_201_CREATED)
 def register(email: str, password: str, db: Session = Depends(get_db)):
     """
     Register a new user with a distinct email, and password.
     """
     try:
-        # Hash the password using bcrypt
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
         response = cognito_service.register_user(email, password)
         user_sub = response["UserSub"]
@@ -50,11 +49,9 @@ def register(email: str, password: str, db: Session = Depends(get_db)):
 
         profile = Profile(
             Username=email,
-            Password=hashed_password.decode('utf-8'),  # Store the hashed password
             Email=email,
             NumberOfRating=0, # Default 0 upon creation
             CurrentRating=0.0, # Default 0 upon creation
-            PhoneNumber=None,
             CognitoUserID=user_sub
         )
 
@@ -121,4 +118,5 @@ def delete_profile(username: str, service: CognitoService = Depends(), db: Sessi
     if not profile_service.delete_profile(username):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
     return {"detail": "Profile deleted successfully"}
+
 

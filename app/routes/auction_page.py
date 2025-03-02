@@ -71,7 +71,7 @@ async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
     result = [{"auction_id": n.AuctionID, "message": n.Message, "timestamp": n.TimeSent.isoformat()} for n in notifications]
     return JSONResponse(content=result)
 
-@router.post("/cleanup_auctions")
-def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@router.post("/cleanup_auctions", dependencies=[Depends(req_admin_role)])
+def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db), auth_info: dict = Depends(get_current_user)):
     AuctionService.schedule_auction_cleanup(background_tasks, db)
-    return {"message": "Auction cleanup scheduled"}
+    return {"message": "Auction cleanup scheduled."}
