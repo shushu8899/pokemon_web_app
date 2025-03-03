@@ -16,7 +16,7 @@ jobs:
           name: Run tests
           command: |
             . venv/bin/activate
-            pytest ./tests | tee test-results.log
+            pytest . | tee test-results.log
       - store_artifacts:
           path: test-results.log
 
