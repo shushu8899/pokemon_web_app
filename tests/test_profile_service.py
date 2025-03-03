@@ -65,7 +65,6 @@ def test_create_duplicate_username(profile_service, mock_db):
     """
     # 1) Arrange
     profile_data = ProfileInfo(UserID=1,
-                               Password = "TestPW1",
                                Username="TestUsername1",
                                Email="username1@gmail.com",
                                NumberofRating=5,
@@ -76,7 +75,6 @@ def test_create_duplicate_username(profile_service, mock_db):
 
     existing_profile_user.UserID = 2
     existing_profile_user.Username = "TestUsername1"
-    existing_profile_user.Password = "TestPW2"
     existing_profile_user.Email = "username2@gmail.com"
     existing_profile_user.NumberOfRating = 10
     existing_profile_user.CurrentRating = 3.5
@@ -100,10 +98,9 @@ def test_create_duplicate_email(profile_service, mock_db):
     """
     # 1) Arrange
     profile_data = ProfileInfo(UserID=1,
-                               Password="TestPW1",
                                Username="TestUsername1",
                                Email="username1@gmail.com",
-                               NumberofRating=5,
+                               NumberOfRating=10,
                                CurrentRating=4.0,
                                CognitoUserID="blahblahblah")
     
@@ -111,7 +108,6 @@ def test_create_duplicate_email(profile_service, mock_db):
 
     existing_profile_email.UserID = 2
     existing_profile_email.Username = "TestUsername2"
-    existing_profile_email.Password = "TestPW2"
     existing_profile_email.Email = "username1@gmail.com"
     existing_profile_email.NumberOfRating = 10
     existing_profile_email.CurrentRating = 3.5
@@ -138,7 +134,6 @@ def test_update_profile(profile_service, mock_db):
 
     existing_profile.UserID = 1
     existing_profile.Username = "TestUsername1"
-    existing_profile.Password = "TestPW1"
     existing_profile.Email = "username1@gmail.com"
     existing_profile.NumberOfRating = 10
     existing_profile.CurrentRating = 3.5
@@ -146,7 +141,6 @@ def test_update_profile(profile_service, mock_db):
 
     # We can update the values here
     updated_data = ProfileInfo(UserID=1, 
-                                Password = "TestPW1",
                                 Username="TestUsername1", 
                                 Email="username2@gmail.com", 
                                 NumberOfRating=10,
