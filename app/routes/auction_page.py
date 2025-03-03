@@ -71,6 +71,26 @@ async def place_bid(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/winning-auctions", response_model=list)
+def get_winning_auctions(
+    auth_info: dict = Depends(get_current_user),
+    service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db)
+):
+    cognito_id = auth_info.get("sub")
+    user_id = profile_service.get_profile_id(cognito_id)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        winning_auctions = service.show_winning_auctions(user_id)
+        return winning_auctions
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/notifications/{auction_id}")
 async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
@@ -82,3 +102,4 @@ async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
 def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db), auth_info: dict = Depends(get_current_user)):
     AuctionService.schedule_auction_cleanup(background_tasks, db)
     return {"message": "Auction cleanup scheduled."}
+
