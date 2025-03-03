@@ -31,7 +31,7 @@ class ProfileService:
         """
         Retrieve Profile by Username
         """
-        return self.db.query(Profile).filter(Profile.Username == username)
+        return self.db.query(Profile).filter(Profile.Username == username).first()
     
     def get_profile_id(self, cognito_id: str):
         """
@@ -46,12 +46,14 @@ class ProfileService:
         """
         Add a new profile
         """
-        existing_profile = self.db.query(Profile).filter(Profile.Username == profile_data.Username).first()
-        if existing_profile:
+        existing_profile_user = self.db.query(Profile).filter(Profile.Username == profile_data.Username).first()
+        if existing_profile_user:
             raise ServiceException(409, "Username already exists")
-        existing_profile = self.db.query(Profile).filter(Profile.Email == profile_data.Email).first()
-        if existing_profile:    
+        
+        existing_profile_email = self.db.query(Profile).filter(Profile.Email == profile_data.Email).first()
+        if existing_profile_email:    
             raise ServiceException(409, "Email already exists")
+        
         new_profile = Profile(**profile_data.model_dump())
         self.db.add(new_profile)
         self.db.commit()
