@@ -20,7 +20,7 @@ jobs:
             pytest ./tests
       - store_artifacts:
         path: test-results.log
-        desitnation: test-results.log
+        destination: test-results.log
 
 workflows:
   version: 2
