@@ -37,7 +37,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
       // Set short delay before loading results
       setTimeout(() => {
         setLoading(false);
-      }, 2000); // 2 seconds delay
+      }, 1000); // 2 seconds delay
     } catch (error) {
       console.error("Error fetching search results", error);
       setLoading(false);
@@ -53,7 +53,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
           <p style={{ marginTop: "20px" }}>Loading...</p>
         </div>
       ) : (
-        <SearchResults results={results} searchPerformed={searchPerformed} />
+        <SearchResults results={results} searchPerformed={searchPerformed}  />
       )}
     </div>
   );

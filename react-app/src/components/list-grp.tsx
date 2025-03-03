@@ -76,14 +76,6 @@ const AuctionList: React.FC = () => {
     <div style={{ textAlign: "center"}}>
       <h1 
         className="font-roboto justify-center p-8 mt-8 mx-8"
-        style = {{
-          fontSize: "36px",
-          fontWeight: "bold",
-          borderRadius: "30px",
-          border: "2px solid #FFCB05",
-
-        }}
-      
       >Pokémon Auction House</h1>
       <div style={{ padding: "20px", textAlign: "center", minHeight: "100vh" }}>
         {/* Floating Pokémon that moves & displays message */}
@@ -203,7 +195,7 @@ const AuctionList: React.FC = () => {
           <button
             onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={page === totalPages}
-            className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
+            className="p-2 text-black rounded"
             style={{ marginLeft: "10px", backgroundColor: "#FFCB05", color: "black" }}
           >
             Next

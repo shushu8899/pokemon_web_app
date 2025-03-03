@@ -21,10 +21,15 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
         onChange={(e) => setQuery(e.target.value)} 
         placeholder="Search for cards or profiles" 
         className="search-bar"
-        style={{ width: '400px', height: "40px", border: "1px solid orange", borderRadius: "5px", padding: "10px" }}
+        style={{ 
+          width: '400px', 
+          height: "40px", 
+          border: "1px solid #FFCB05", 
+          borderRadius: "5px", 
+          padding: "10px" }}
       />
-      <button onClick={handleSearch} className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
-      style = {{ marginLeft: "10px" }}>
+      <button onClick={handleSearch} className="p-2 text-black rounded hover:bg-orange-300"
+      style = {{ marginLeft: "10px", backgroundColor: "#FFCB05" }}>
         Search
       </button>
     </main>

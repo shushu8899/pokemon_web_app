@@ -9,6 +9,7 @@ import AuctionList from "./components/list-grp";
 import BiddingPage from "./components/auction-details";
 import SearchPage from "./components/SearchPage";
 
+
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
 
@@ -46,12 +47,12 @@ function App() {
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                 <Link to="/auction/1" className="block px-4 py-2 text-gray-700 hover:bg-red-100" role="menuitem">
                   <button className="text-black font-bold">
-                  Auction 1
+                  Create auction
                   </button>
                 </Link>
-                <Link to="/auction/2" className="block px-4 py-2 text-gray-700 hover:bg-red-100" role="menuitem">
+                <Link to="/verify-card" className="block px-4 py-2 text-gray-700 hover:bg-red-100" role="menuitem">
                   <button className="text-black font-bold">
-                  Auction 2
+                  Verify card
                   </button>
                 </Link>
               </div>
@@ -81,7 +82,7 @@ function App() {
             backgroundColor: "#FFCB05"}}>
           {/* Left Side - Text */}
           <div className="flex flex-col items-center justify-center space-y-6 font-roboto">
-            <h1 className="text-4xl font-bold text-black">Welcome to Pokemon TCG Auction</h1>
+            <h1 className="text-4xl font-bold text-black">Welcome to Pokémon TCG Auction</h1>
             <p className="text-lg justify-center font-roboto" 
                 style={{ color: "black"}}>
               Discover amazing auctions, bid with confidence, and find the best deals.
@@ -98,7 +99,7 @@ function App() {
             <img
               src={mainpic}
               alt="Landing page pic"
-              className="rounded-lg justify-center" 
+              className="rounded-lg justify-center " 
               style={{ borderRadius: "30px"}}
             />
           </div>
