@@ -55,3 +55,9 @@ class CardService:
         self.db.delete(card)
         self.db.commit()
         return True
+    
+    def get_validated_cards_by_user_id(self, user_id: int):
+        """
+        Get all validated cards owned by a user
+        """
+        return self.db.query(Card).filter(Card.OwnerID == user_id, Card.IsValidated == True).all()

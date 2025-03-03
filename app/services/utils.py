@@ -13,7 +13,7 @@ def schedule_update_job():
     scheduler.start()
 
 def update_job():
-    auction_service = get_auction_service(db=get_db())
+    auction_service = get_auction_service(db=next(get_db()))
     auction_service.update_auction_status()
 
 
