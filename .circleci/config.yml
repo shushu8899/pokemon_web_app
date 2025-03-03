@@ -1,4 +1,3 @@
-# filepath: .circleci/config.yml
 version: 2.1
 
 jobs:
@@ -17,10 +16,9 @@ jobs:
           name: Run tests
           command: |
             . venv/bin/activate
-            pytest ./tests
+            pytest ./tests | tee test-results.log
       - store_artifacts:
-        path: test-results.log
-        destination: test-results.log
+          path: test-results.log
 
 workflows:
   version: 2
