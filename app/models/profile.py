@@ -18,7 +18,7 @@ class Profile(Base):
     Username = Column(VARCHAR, nullable=False, unique=True)
     Email = Column(VARCHAR, nullable=True)  # PDPA # Shouldn't email be primary key now that authentication uses email as username, only one account per email
     NumberOfRating = Column(Integer, nullable=False, default=0)
-    CurrentRating = Column(Integer, nullable=False, default=0)
+    CurrentRating = Column(Float, nullable=False, default=0)
     CognitoUserID = Column(VARCHAR, nullable=True, unique=True)
 
     # Relationship with Cards and Notifications
@@ -33,7 +33,7 @@ class ProfileBase(BaseModel):
     Username: str
     Email: str
     NumberOfRating: Optional[int] = 0 
-    CurrentRating: Optional[int] = 0.0
+    CurrentRating: Optional[float] = 0.0
     CognitoUserID: str
 
     @field_validator("Email")
