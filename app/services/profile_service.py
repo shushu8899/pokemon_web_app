@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.profile import Profile, ProfileInfo
 from app.dependencies.auth import req_admin_role
 from fastapi import Depends, HTTPException
+from app.exceptions import ServiceException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.services.cognito_service import CognitoService
 
@@ -43,6 +44,12 @@ class ProfileService:
         """
         Add a new profile
         """
+        existing_profile = self.db.query(Profile).filter(Profile.Username == profile_data.Username).first()
+        if existing_profile:
+            raise ServiceException(409, "Username already exists")
+        existing_profile = self.db.query(Profile).filter(Profile.Email == profile_data.Email).first()
+        if existing_profile:    
+            raise ServiceException(409, "Email already exists")
         new_profile = Profile(**profile_data.model_dump())
         self.db.add(new_profile)
         self.db.commit()
