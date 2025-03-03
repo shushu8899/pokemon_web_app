@@ -12,10 +12,7 @@ from app.models.notifications import Notification
 from typing import Dict
 from sqlalchemy.orm import Session
 from app.dependencies.auth import req_user_role #Add this
-import os
-import shutil
-import requests
-import boto3
+from app.services.utils import schedule_update_job
 from jose import jwt
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
@@ -25,6 +22,7 @@ from app.db.db import get_db
 from app.routes.auth import cognito_service
 
 router = APIRouter()
+schedule_update_job()
 
 @router.get("/auction-collection")
 async def display_auction_page(page: int = Query(1, description="Page number"),  auction_service: AuctionService = Depends(get_auction_service)):
@@ -45,8 +43,9 @@ async def display_auction_details(auction_id:int, auction_service: AuctionServic
     return auction
 
 @router.post("/place-bid",status_code= status.HTTP_200_OK, dependencies=[Depends(req_user_role)])
-async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depends(get_auction_service), profile_service: ProfileService = Depends(get_profile_service), auth_info: dict = Depends(req_user_role)):  # ✅ Require authentication
-    cognito_id = auth_info.get("username")
+async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depends(get_auction_service), profile_service: ProfileService = Depends(get_profile_service)):  # ✅ Require authentication
+    auth_info: dict = Depends(profile_service.get_current_user())
+    cognito_id = auth_info.get("sub")
     user_id = profile_service.get_profile_id(cognito_id)
     if not user_id:
         raise HTTPException(status_code=404, detail="User not found")

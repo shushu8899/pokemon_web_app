@@ -48,6 +48,20 @@ class AuctionService:
         )
         return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
+
+    def update_auction_status(self):
+        current_time = datetime.utcnow()
+        auctions = self.db.query(Auction).all()
+        for auction in auctions:
+            if auction.EndTime > current_time:
+                auction.Status = "In Progress"
+            elif auction.EndTime <= current_time and auction.HighestBid > 0:
+                auction.Status = "Closed"
+            else:
+                auction.Status = "Expired"
+
+        self.db.commit()
+
     def get_auctions_details(self, auction_id: int):
         """
         Get auctions by auction id for bidding
@@ -136,10 +150,14 @@ class AuctionService:
         # Check if auction exists
         auction = self.get_auction_by_id(bid_info.AuctionID)
         if not auction:
-            return None  # Auction Does not exist
+            raise HTTPException(status_code=404, detail="Auction not found")
         #Check if user id is the seller
         if auction.SellerID == user_id:
-            return None  # Seller cannot bid on their own auction
+            raise HTTPException(status_code=403, detail="Seller cannot bid on their own auction")
+        
+        if auction.Status == "Closed":
+            raise HTTPException(status_code=400, detail="Cannot bid on a closed auction")
+
         if auction.HighestBid + auction.MinimumIncrement > bid_info.BidAmount:
             print(f"user bid {bid_info.BidAmount} not high enough, cur bid : {auction.HighestBid + auction.MinimumIncrement}")
             return None  # Current bid not high enough
