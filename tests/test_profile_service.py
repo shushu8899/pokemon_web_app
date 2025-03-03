@@ -1,9 +1,16 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pytest
 from unittest.mock import Mock
 from app.exceptions import ServiceException
 
 from app.services.profile_service import ProfileService
 from app.models.profile import Profile, ProfileInfo
+from app.models.card import Card, CardInfo
+from app.models.auction import Auction, AuctionInfo
+from app.models.notifications import Notification, NotificationInfo
 
 @pytest.fixture
 def mock_db():
@@ -25,14 +32,14 @@ def test_get_profile(profile_service, mock_db):
                 Email="username1@gmail.com",
                 NumberOfRating=5,
                 CurrentRating=4.0,
-                CognitoID="blahblahblah"
+                CognitoUserID="blahblahblah"
         ),
         Profile(UserID=2, 
                 Username="TestUsername2",
                 Email="username2@gmail.com",
                 NumberOfRating=10,
                 CurrentRating=3.5,
-                CognitoID="kekekek"
+                CognitoUserID="kekekek"
         )
     ]
 
@@ -62,6 +69,7 @@ def test_get_profile(profile_service, mock_db):
 def test_create_duplicate_username(profile_service, mock_db):
     """
     Test for creation of profile with duplicate Username
+    Note : Username is the Email in this case
     """
     # 1) Arrange
     profile_data = ProfileInfo(UserID=1,
@@ -89,39 +97,6 @@ def test_create_duplicate_username(profile_service, mock_db):
     # 3) Assert
     assert exc_info.value.status_code == 409
     assert "Username already exists" in exc_info.value.detail
-    mock_db.add.assert_not_called()
-    mock_db.commit.assert_not_called()
-
-def test_create_duplicate_email(profile_service, mock_db):
-    """
-    Test for creation of profile with duplicate Email
-    """
-    # 1) Arrange
-    profile_data = ProfileInfo(UserID=1,
-                               Username="TestUsername1",
-                               Email="username1@gmail.com",
-                               NumberOfRating=10,
-                               CurrentRating=4.0,
-                               CognitoUserID="blahblahblah")
-    
-    existing_profile_email = Mock()
-
-    existing_profile_email.UserID = 2
-    existing_profile_email.Username = "TestUsername2"
-    existing_profile_email.Email = "username1@gmail.com"
-    existing_profile_email.NumberOfRating = 10
-    existing_profile_email.CurrentRating = 3.5
-    existing_profile_email.CognitoUserID = "kekekek"
-    
-    mock_db.query.return_value.filter.return_value.first.return_value = existing_profile_email
-
-    # 2) Act
-    with pytest.raises(ServiceException) as exc_info:
-        profile_service.add_profile(profile_data)
-    
-    # 3) Assert
-    assert exc_info.value.status_code == 409
-    assert "Email already exists" in exc_info.value.detail
     mock_db.add.assert_not_called()
     mock_db.commit.assert_not_called()
 
@@ -178,7 +153,7 @@ def test_delete_profile(profile_service, mock_db):
     result = profile_service.delete_profile(username="TestUsername1")
 
     # 3) Assert
-    mock_db.delete.assert_called_once(existing_profile)
+    mock_db.delete.assert_called_once_with(existing_profile)
     mock_db.commit.assert_called_once()
     assert result is True
 
