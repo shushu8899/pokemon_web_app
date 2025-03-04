@@ -45,7 +45,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
   };
 
   return (
-    <div className="min-h-screen flex-col">
+    <div className="min-h-screen flex-col mt-8">
       <SearchBar onSearch={handleSearch} />
       {loading ? (
         <div className="mt-4 text-center py-8 flex flex-col items-center">

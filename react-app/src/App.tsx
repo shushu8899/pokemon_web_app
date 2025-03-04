@@ -8,7 +8,7 @@ import mainpic from "./assets/image_2025-03-02_15-25-55.png"; // Ensure the file
 import AuctionList from "./components/list-grp";
 import BiddingPage from "./components/auction-details";
 import SearchPage from "./components/SearchPage";
-
+import VerifyCard from "./components/verify-card";
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -107,11 +107,12 @@ function App() {
       )}
 
       {/* Main Content */}
-      <div className="flex-grow mt-8">
+      <div className="flex-grow">
         <Routes>
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />
+          <Route path="/verify-card" element={<VerifyCard />} />
         </Routes>
       </div>
     </div>
