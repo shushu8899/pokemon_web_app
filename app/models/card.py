@@ -6,7 +6,7 @@ Card Table - Will contain all the card data
 
 from sqlalchemy import Column, Integer, VARCHAR, String, Boolean, ForeignKey
 from app.db.db import Base
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, ConfigDict, Field
 from sqlalchemy.orm import relationship
 from typing import Optional
 
@@ -28,7 +28,12 @@ class Card(Base):
 
 
 class CardBase(BaseModel):
-    review: str
+    CardID: int
+    CardName: str
+    CardQuality: str
+    OwnerID: int
+    IsValidated: bool
+    ImageURL: Optional[str]  # Add ImageURL to CardResponse
 
 
 class CardInfo(CardBase):
