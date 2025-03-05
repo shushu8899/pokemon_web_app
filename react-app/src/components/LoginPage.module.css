@@ -1,0 +1,66 @@
+.loginPage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align items to the start of the flex container */
+  height: 100vh; /* Full viewport height */
+  padding-top: 10%; /* Add padding to move the container down */
+}
+
+.loginContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 300px; /* Adjust the width as needed */
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.loginContainer form div {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.loginContainer form label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.loginContainer form input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.loginContainer button {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: rgb(255, 255, 255);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 18px; /* Adjust the font size as needed */
+}
+
+.loginContainer button:hover {
+  background-color: #0056b3;
+}
+
+.loginContainer p {
+  margin-top: 20px;
+  font-size: 16px; /* Smaller font size for the text */
+}
+
+.signUpLink {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 16px; /* Adjust the font size as needed */
+  margin-left: 5px; /* Add space between the text and the link */
+}
+
+.signUpLink:hover {
+  color: #0056b3;
+}

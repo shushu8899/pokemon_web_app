@@ -1,12 +1,16 @@
 import { Routes, Route, Link } from "react-router-dom";
-import { useState } from "react";
-import axios from "axios";
+// import { useState } from "react";
+// import axios from "axios";
 import Logo from "./assets/logo.svg.png"; // Ensure the file exists in src/assets
 
 // Components
 import AuctionList from "./components/list-grp";
 import BiddingPage from "./components/auction-details";
 import SearchPage from "./components/SearchPage";
+// Add the components for Login and Register new user pages
+import Login from "./components/LoginPage"; // Import Login component
+import Register from "./components/RegistrationPage.tsx"; // Import Register component
+// import ResetPasswordPage from './components/ResetPasswordPage';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -65,7 +69,13 @@ function App() {
           </Link>
           <Link to="/login">
             <button className="w-full px-4 py-2 text-black bold-text">
-              Log in
+              Login
+            </button>
+          </Link>
+          {/* Added navigation link to register user componet */}
+          <Link to="/register"> 
+            <button className="w-full px-4 py-2 text-black bold-text">
+              Sign Up
             </button>
           </Link>
         </div>
@@ -77,6 +87,9 @@ function App() {
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />
+          <Route path="/login" element={<Login />} /> {/* Add Login route */}
+          <Route path="/register" element={<Register />} /> {/* Add Register route */}
+          {/* <Route path="/reset-password" element={<ResetPasswordPage />} /> Add Reset Password route */}
         </Routes>
       </div>
     </div>

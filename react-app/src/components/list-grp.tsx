@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Auction, fetchAuctions } from "../services/auction-service";
+// import { Auction } from "../services/auction-service";
 import axios from "axios";
 
 // Define the Auction type based on FastAPI response
