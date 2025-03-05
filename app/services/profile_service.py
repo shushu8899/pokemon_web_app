@@ -7,6 +7,11 @@ Profile DB Services, run database queries for specific manipulations
 from sqlalchemy.orm import Session
 from app.models.profile import Profile, ProfileInfo
 from app.dependencies.auth import req_admin_role
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.services.cognito_service import CognitoService
+
+bearer_scheme = HTTPBearer()
 
 
 class ProfileService:
@@ -27,9 +32,12 @@ class ProfileService:
     
     def get_profile_id(self, cognito_id: str):
         """
-        Retrieve Profile by id
+        Retrieve Profile by Cognito ID
         """
-        return self.db.query(Profile.UserID).filter(Profile.CognitoUserID == cognito_id).first()[0]
+        profile = self.db.query(Profile).filter(Profile.CognitoUserID == cognito_id).first()
+        if profile:
+            return profile.UserID
+        return None
 
     def add_profile(self, profile_data: ProfileInfo):
         """
@@ -68,3 +76,8 @@ class ProfileService:
             self.db.commit()
             return True
         return False
+    
+def get_current_user(auth: HTTPAuthorizationCredentials = Depends(bearer_scheme), cognito_service: CognitoService = Depends(CognitoService)):
+    token = auth.credentials
+    payload = cognito_service.validate_token(auth)
+    return payload

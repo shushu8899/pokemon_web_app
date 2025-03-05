@@ -16,9 +16,7 @@ interface AuctionDetail {
 
 // Define the bid request type
 interface BidRequest {
-    auction_id: number;
-    user_id: number;
-    HighestBid: number;
+    bid_value: number;
 }
 
 const BiddingPage: React.FC = () => {
@@ -87,13 +85,11 @@ const BiddingPage: React.FC = () => {
 
         try {
             const bidData: BidRequest = {
-                auction_id: auction.AuctionID,
-                user_id: 1, // Should be removed; backend should get user from token
-                HighestBid: bidValue
+                bid_value: bidValue
             };
 
             const response = await axios.post(
-                "http://127.0.0.1:8000/bidding/place-bid",
+                `http://127.0.0.1:8000/bidding/place-bid/${auction.AuctionID}`,
                 bidData,
                 { headers: { Authorization: `Bearer ${token}` } } // ✅ Attach Auth Header
             );

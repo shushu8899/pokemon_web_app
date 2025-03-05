@@ -10,9 +10,12 @@ from app.models.profile import Profile
 from app.models.auction import Auction, AuctionInfo, AuctionBid
 from app.models.notifications import Notification
 from app.services.profile_service import ProfileService
-from datetime import datetime, timezone
-from fastapi import HTTPException, BackgroundTasks, HTTPException, status, Depends
-from app.dependencies.auth import req_user_role #Add this
+from datetime import datetime, timedelta
+from fastapi import HTTPException, BackgroundTasks, UploadFile
+import os
+import shutil
+import uuid
+import logging
 from typing import Union
 
 
@@ -20,24 +23,25 @@ class AuctionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_auctions_by_page(self, page:int,page_size: int = 10):
+    def get_auctions_by_page(self, page: int, page_size: int = 10):
         """
         Get auctions by page limited to 10 auctions per page
         Display the expiring auctions first
         """
-        current_date = datetime.today().date() # assume endtime is a date
+        current_date = datetime.today().date()  # assume endtime is a date
         offset = (page - 1) * page_size  # Pagination offset
         query_result = (
-            self.db.query(            
+            self.db.query(
                 Auction.AuctionID,
                 Auction.CardID,
                 Auction.Status,
                 Auction.EndTime,
                 Auction.HighestBid,
+                Auction.EndTime,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
-                Auction.ImageURL  # Ensure this is the correct field in `Card)
+                Card.ImageURL,  # Include ImageURL from Card
             )
             .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
             # .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired to add back
@@ -48,11 +52,25 @@ class AuctionService:
         )
         return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
+
+    def update_auction_status(self):
+        current_time = datetime.utcnow()
+        auctions = self.db.query(Auction).all()
+        for auction in auctions:
+            if auction.EndTime > current_time:
+                auction.Status = "In Progress"
+            elif auction.EndTime <= current_time and auction.HighestBid > 0:
+                auction.Status = "Closed"
+            else:
+                auction.Status = "Expired"
+
+        self.db.commit()
+
     def get_auctions_details(self, auction_id: int):
         """
-        Get auctions by auction id for bidding
+        Get auction details by auction ID
         """
-        query_result = ( 
+        auction = ( 
             self.db.query(            
             Auction.AuctionID,
             Auction.CardID,
@@ -68,13 +86,38 @@ class AuctionService:
             .filter(Auction.AuctionID == auction_id) 
             .first()
         )
-        print(query_result)
-        auction_indiv = dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], query_result))
-        if not auction_indiv:
+        if not auction:
             raise HTTPException(status_code=404, detail="Auction not found")
-        return auction_indiv
 
+        # Update the status of the auction based on the current datetime
+        current_time = datetime.now()
+        if current_time > auction.EndTime:
+            auction.Status = "Closed"
+        else:
+            auction.Status = "In Progress"
+        self.db.commit()
+        self.db.refresh(auction)
 
+        card = self.db.query(Card).filter(Card.CardID == auction.CardID).first()
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
+
+        auction_details = {
+            "AuctionID": auction.AuctionID,
+            "CardID": auction.CardID,
+            "SellerID": auction.SellerID,
+            "MinimumIncrement": auction.MinimumIncrement,
+            "EndTime": auction.EndTime,
+            "Status": auction.Status,
+            "HighestBidderID": auction.HighestBidderID,
+            "HighestBid": auction.HighestBid,
+            "CardName": card.CardName,
+            "CardQuality": card.CardQuality,
+            "IsValidated": card.IsValidated,
+            "ImageURL": card.ImageURL  # Use the ImageURL from the card
+        }
+
+        return auction_details
 
     def get_total_page(self):
             """
@@ -92,54 +135,154 @@ class AuctionService:
         """
         return self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
 
-    def add_auction(self, card_id: int, auction_data: AuctionInfo):
+    def create_auction(self, user_id: int, card_id: int, starting_bid: float, minimum_increment: float, auction_duration: float):
         """
-        Add a new Auction
+        Create a new auction
         """
-        # Check if Card Exists
-        card = self.db.query(Card).filter(Card.CardID == card_id,).first()
+        # Check if the card exists and belongs to the user
+        card = self.db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == user_id).first()
         if not card:
-            return None
-        new_auction = Auction(
-            CardID=card.CardID, SellerID=card.OwnerID, **auction_data.model_dump()
-        )
-        self.db.add(new_auction)
-        self.db.commit()
-        self.db.refresh(new_auction)
-        return new_auction
+            raise HTTPException(status_code=404, detail="Card not found or you do not have permission to use this card")
 
-    def update_auction(self, auction_id: int, user_id: int, update_info: AuctionInfo):
+        # Check if the card is validated
+        if not card.IsValidated:
+            raise HTTPException(status_code=400, detail="Card is not validated and cannot be used for auction")
+
+        # Check if the card is already in an auction with status "In Progress"
+        existing_auction = self.db.query(Auction).filter(Auction.CardID == card_id, Auction.Status == "In Progress").first()
+        if existing_auction:
+            raise HTTPException(status_code=400, detail="Card is already in an auction that is in progress")
+
+        # Calculate the end time of the auction
+        end_time = datetime.now() + timedelta(hours=auction_duration)
+
+        # Validate the end time
+        if end_time <= datetime.now():
+            raise HTTPException(status_code=400, detail="End Time must be later than the current time!")
+
+        # Validate the starting bid
+        if starting_bid <= 0:
+            raise HTTPException(status_code=400, detail="Starting bid must be greater than zero!")
+
+        # Validate the minimum increment
+        if minimum_increment <= 0:
+            raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
+
+        # Create auction record
+        auction_data = Auction(
+            CardID=card.CardID,
+            SellerID=card.OwnerID,
+            MinimumIncrement=minimum_increment,
+            EndTime=end_time,
+            Status="In Progress" if end_time > datetime.now() else "Ended",
+            HighestBidderID=None,  # Set to None initially
+            HighestBid=starting_bid
+        )
+
+        self.db.add(auction_data)
+        self.db.commit()
+        self.db.refresh(auction_data)
+
+        return auction_data
+
+    def delete_auction(self, auction_id: int, user_id: int):
+        """
+        Delete an auction by its ID if the user is the seller
+        """
+        # Check if auction exists
+        auction = self.get_auction_by_id(auction_id)
+        if not auction:
+            raise HTTPException(status_code=404, detail="Auction not found")
+
+        # Check if the user is the seller
+        if auction.SellerID != user_id:
+            raise HTTPException(status_code=403, detail="You do not have permission to delete this auction")
+
+        # Delete the auction
+        self.db.delete(auction)
+        self.db.commit()
+        return {"message": "Auction deleted successfully"}
+
+    def get_auctions_by_seller(self, seller_id: int):
+        """
+        Retrieve auctions by seller ID
+        """
+        return self.db.query(Auction).filter(Auction.SellerID == seller_id).all()
+    
+    def update_auction(self, auction_id: int, cognito_user_id: str, minimum_increment: float, starting_bid: float, auction_duration: float, profile_service: ProfileService):
         """
         Update the auction data
         """
-        # Check if auction exists under user
+        # Get the user ID from the Cognito user ID
+        user_id = profile_service.get_profile_id(cognito_user_id)
+        if not user_id:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Check if auction exists
         auction = self.get_auction_by_id(auction_id)
         if not auction:
-            return None  # Auction does not exist
-        auction = (
-            self.db.query(Auction)
-            .filter(Auction.AuctionID == auction_id, Auction.SellerID == user_id)
-            .first()
-        )
-        if not auction:
-            return None  # User does not have permission to edit auction
-        for key, value in update_info.model_dump().items():
-            setattr(auction, key, value)
+            raise HTTPException(status_code=404, detail="Auction not found")
+
+        # Check if the user is the seller
+        if auction.SellerID != user_id:
+            raise HTTPException(status_code=403, detail="You do not have permission to update this auction")
+
+        # Check if the HighestBidderID is not None
+        if auction.HighestBidderID is not None:
+            raise HTTPException(status_code=403, detail="You cannot update auction because it is already in progress")
+
+        # Calculate the end time of the auction
+        end_time = datetime.now() + timedelta(hours=auction_duration)
+
+        # Validate the end time
+        if end_time <= datetime.now():
+            raise HTTPException(status_code=400, detail="End Time must be later than the current time!")
+
+        # Validate the starting bid
+        if starting_bid <= 0:
+            raise HTTPException(status_code=400, detail="Starting bid must be greater than zero!")
+
+        # Validate the minimum increment
+        if minimum_increment <= 0:
+            raise HTTPException(status_code=400, detail="Minimum increment must be greater than zero!")
+
+        # Update the auction record
+        auction.MinimumIncrement = minimum_increment
+        auction.EndTime = end_time
+        auction.StartingBid = starting_bid
+
+        # Compare current datetime vs end time of the auction
+        current_time = datetime.now()
+        if current_time > auction.EndTime:
+            auction.Status = "Closed"
+        else:
+            auction.Status = "In Progress"
+
         self.db.commit()
         self.db.refresh(auction)
+
         return auction
 
-    def bid_auction(self,user_id: int, bid_info: AuctionBid):
+    def bid_auction(self, cognito_user_id: str, bid_info: AuctionBid, profile_service: ProfileService):
         """
         Make a new bid in an auction
         """
+        # Get the user ID from the Cognito user ID
+        user_id = profile_service.get_profile_id(cognito_user_id)
+        if not user_id:
+            raise HTTPException(status_code=404, detail="User not found")
+
         # Check if auction exists
         auction = self.get_auction_by_id(bid_info.AuctionID)
         if not auction:
-            return None  # Auction Does not exist
+            raise HTTPException(status_code=404, detail="Auction not found")
         #Check if user id is the seller
         if auction.SellerID == user_id:
-            return None  # Seller cannot bid on their own auction
+            raise HTTPException(status_code=403, detail="Seller cannot bid on their own auction")
+        
+        if auction.Status == "Closed":
+            raise HTTPException(status_code=400, detail="Cannot bid on a closed auction")
+
         if auction.HighestBid + auction.MinimumIncrement > bid_info.BidAmount:
             print(f"user bid {bid_info.BidAmount} not high enough, cur bid : {auction.HighestBid + auction.MinimumIncrement}")
             return None  # Current bid not high enough
@@ -167,7 +310,7 @@ class AuctionService:
                 self.db.add(notification)
                 self.db.commit()
 
-            return auction
+        return auction
 
     def get_auction_by_card_name_qualty(
         self, card_name: str, card_quality: str = "None"
@@ -198,7 +341,7 @@ class AuctionService:
 
     def end_expired_auctions(self):
         """Automatically ends auctions that have expired."""
-        now = datetime.now(timezone.utc)  # Use timezone-aware datetime
+        now = datetime.now()  # Use timezone-aware datetime
         expired_auctions = self.db.query(Auction).filter(
             Auction.Status == "In Progress",
             Auction.EndTime <= now
@@ -215,7 +358,7 @@ class AuctionService:
                     BidderID=auction.HighestBidderID,
                     AuctionID=auction.AuctionID,
                     Message=message,
-                    TimeSent=datetime.now(timezone.utc)
+                    TimeSent=datetime.now()
                 )
                 self.db.add(notification)
 
@@ -225,14 +368,13 @@ class AuctionService:
                 BidderID=auction.SellerID,  # Notify the seller as well
                 AuctionID=auction.AuctionID,
                 Message=message,
-                TimeSent=datetime.now(timezone.utc)
+                TimeSent=datetime.now()
             )
             self.db.add(notification)
 
             self.db.commit()
 
         print(f"{len(expired_auctions)} auctions ended.")
-
 
     def schedule_auction_cleanup(background_tasks: BackgroundTasks, db: Session):
         auction_service = AuctionService(db)
