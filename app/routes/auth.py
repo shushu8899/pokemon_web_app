@@ -22,18 +22,19 @@ This file defines the authentication endpoints for the FastAPI application.
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app.services.cognito_service import CognitoService
-from app.services.profile_service import ProfileService
+from app.services.profile_service import ProfileService, ProfileInfo
 from app.exceptions import ServiceException
 from app.models.profile import Profile
 from app.db.db import get_db
 from app.dependencies.auth import req_admin_role
 import bcrypt
+from app.dependencies.services import get_profile_service
 
 router = APIRouter()
 cognito_service = CognitoService() #create instance of CognitoService
 
 @router.post("/registration", status_code=status.HTTP_201_CREATED)
-def register(email: str, password: str, db: Session = Depends(get_db)):
+def register(email: str, password: str, db: Session = Depends(get_db), service = Depends(get_profile_service)):
     """
     Register a new user with a distinct email, and password.
     """
@@ -45,18 +46,13 @@ def register(email: str, password: str, db: Session = Depends(get_db)):
         '''
         Create a new profile entry in the profiles table
         '''
-
-        profile = Profile(
+        service.add_profile(ProfileInfo(
             Username=email,
             Email=email,
             NumberOfRating=0, # Default 0 upon creation
             CurrentRating=0.0, # Default 0 upon creation
             CognitoUserID=user_sub
-        )
-
-        db.add(profile)
-        db.commit()
-        db.refresh(profile)
+        ))
         
         return {
             "message": "User registration successful.",

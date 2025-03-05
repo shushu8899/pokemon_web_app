@@ -1,0 +1,32 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+      - run:
+          name: Set PYTHONPATH
+          command: |
+            echo "export PYTHONPATH=$(pwd)" >> ~/.bashrc
+            . ~/.bashrc
+      - run:
+          name: Run tests
+          command: |
+            . venv/bin/activate
+            pytest . | tee test-results.log
+      - store_artifacts:
+          path: test-results.log
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
