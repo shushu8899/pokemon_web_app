@@ -364,6 +364,54 @@ class CognitoService:
     #     except Exception as e:
     #         raise ServiceException(status_code=500, detail=f"Failed to list users: {str(e)}")
 
+# add user password reset
+    def reset_password(self, email: str):
+        """
+        Reset the user's password by sending a verification code to the user's email.
+        """
+        # print(f"Email: {email}")
+        # print(f"Client ID: {self.client_id}")
+        # print(f"Secret Hash: {self.calculate_secret_hash(email)}")
+        try:
+            self.client.forgot_password(
+                ClientId=self.client_id,
+                Username=email,
+                SecretHash=self.calculate_secret_hash(email)
+            )
+            return "Password reset code sent successfully."
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User not found.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Failed to send password reset code: {str(e)}")
+        
+# confirm password reset
+    def confirm_password_reset(self, email: str, password: str, reset_confirmation_code: str):
+        """
+        Confirm the password reset with the code sent to the user's email.
+        """
+        #for error checking
+        # print(f"Email: {email}")
+        # print(f"Confirmation Code: {reset_confirmation_code}")
+        # print(f"Client ID: {self.client_id}")
+        # print(f"Secret Hash: {self.calculate_secret_hash(email)}")
+
+        try:
+            self.client.confirm_forgot_password(
+                ClientId=self.client_id,
+                Username=email,
+                ConfirmationCode=reset_confirmation_code,
+                Password=password,
+                SecretHash=self.calculate_secret_hash(email)
+            )
+            return "Password reset successful."
+        except self.client.exceptions.CodeMismatchException:
+            raise ServiceException(status_code=400, detail="Invalid confirmation code.")
+        except self.client.exceptions.ExpiredCodeException:
+            raise ServiceException(status_code=400, detail="Confirmation code has expired.")
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User not found.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Failed to reset password: {str(e)}")
 
 class RoleChecker:
     def __init__(self, allowed_role: str):

@@ -114,4 +114,38 @@ def delete_profile(username: str, service: CognitoService = Depends(), db: Sessi
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
     return {"detail": "Profile deleted successfully"}
 
-
+# add new endpoint for password reset
+@router.post("/reset-password")
+def reset_password(email: str):
+    """
+    Reset the user's password.
+    """
+    try:
+        response = cognito_service.reset_password(email)
+        return response
+    except ServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    
+#add new endpoint for confirm password reset
+@router.post("/confirm-password-reset")
+def confirm_password_reset(email: str, new_password: str, reset_confirmation_code: str,):
+    """
+    Confirm the user's password reset.
+    """
+    try:
+        response = cognito_service.confirm_password_reset(email, new_password, reset_confirmation_code)
+        return response
+    except ServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    
+# # add new endpoint for user logout
+# @router.post("/logout")
+# def logout():
+#     """
+#     Logout the user.
+#     """
+#     try:
+#         cognito_service.logout()
+#         return {"message": "Logout successful."}
+#     except ServiceException as e:
+#         raise HTTPException(status_code=e.status_code, detail=e.detail)
