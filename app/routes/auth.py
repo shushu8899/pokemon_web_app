@@ -17,7 +17,6 @@ This file defines the authentication endpoints for the FastAPI application.
 - add a new endpoint for user profile update
 - add a new endpoint for user profile retrieval
 - customise confirmation email template (e.g. add logo, change text, etc.)
-- MFA (multi-factor authentication) for login, confirmation
 '''
 
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -87,12 +86,12 @@ def confirm(email: str, confirmation_code: str):
     """
     try:
         # Confirm sign-up
-        cognito_service.confirm_user(
+        response = cognito_service.confirm_user(
             email=email,
             confirmation_code=confirmation_code,
         )
 
-        return {"message": "User confirmed successfully."}
+        return response 
 
     except ServiceException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

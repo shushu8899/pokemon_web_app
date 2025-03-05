@@ -129,7 +129,7 @@ class CognitoService:
     #     except Exception as e:
     #         raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
-    # update user login to use only email
+    # update user login to use only email -- to update login to check if user exists in aws cognito first
     def authenticate_user(self, email: str, password: str):
         """
         Authenticate a user with Cognito using their email and password.
@@ -268,8 +268,18 @@ class CognitoService:
     def confirm_user(self, email: str, confirmation_code: str):
         """
         Confirm the user's signup with the code they received by email
+        Automatically add the user to the appropriate group based on the email domain.
         """
         try:
+            # Check if the user exists
+            try:
+                self.client.admin_get_user(
+                    UserPoolId=self.user_pool_id,
+                    Username=email
+                )
+            except self.client.exceptions.UserNotFoundException:
+                raise ServiceException(status_code=404, detail="User not found.")
+            
             # First confirm the sign-up
             self.client.confirm_sign_up(
                 ClientId=self.client_id,
@@ -278,14 +288,27 @@ class CognitoService:
                 SecretHash=self.calculate_secret_hash(email)
             )
 
-            return "User confirmed successfully."
+            # Determine the user group based on the email domain
+            if email.endswith('@mitb.smu.edu.sg'): #use guerrillamail.com for pokemail.net domain :can be changed to our sch email domain (for demo purposes)
+                group_name = 'Admins'
+            else:
+                group_name = 'Users'
+
+            # Add the user to the appropriate group
+            self.client.admin_add_user_to_group(
+                UserPoolId=self.user_pool_id,
+                Username=email,
+                GroupName=group_name
+            )
+
+            return f"User confirmed successfully and added to {group_name} group."
         
         except self.client.exceptions.CodeMismatchException:
             raise ServiceException(status_code=400, detail="Invalid confirmation code.")
         except self.client.exceptions.ExpiredCodeException:
             raise ServiceException(status_code=400, detail="Confirmation code has expired.")
-        except self.client.exceptions.UserNotFoundException:
-            raise ServiceException(status_code=404, detail="User not found.")
+        # except self.client.exceptions.UserNotFoundException:
+        #     raise ServiceException(status_code=404, detail="User not found.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Confirmation failed: {str(e)}")
 # ------------------------- End of update -----------------------------------------------------------------------------
