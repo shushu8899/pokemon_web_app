@@ -412,6 +412,22 @@ class CognitoService:
             raise ServiceException(status_code=404, detail="User not found.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Failed to reset password: {str(e)}")
+        
+# add user logout
+    def logout(self, access_token: str):
+        """
+        Logout the user by invalidating their access token.
+        """
+        try:
+            self.client.global_sign_out(
+                AccessToken=access_token
+            )
+            return "Logout successful."
+        except self.client.exceptions.NotAuthorizedException:
+            raise ServiceException(status_code=401, detail="The access token is invalid or expired.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Logout failed: {str(e)}")
+
 
 class RoleChecker:
     def __init__(self, allowed_role: str):

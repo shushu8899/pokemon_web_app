@@ -138,14 +138,14 @@ def confirm_password_reset(email: str, new_password: str, reset_confirmation_cod
     except ServiceException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     
-# # add new endpoint for user logout
-# @router.post("/logout")
-# def logout():
-#     """
-#     Logout the user.
-#     """
-#     try:
-#         cognito_service.logout()
-#         return {"message": "Logout successful."}
-#     except ServiceException as e:
-#         raise HTTPException(status_code=e.status_code, detail=e.detail)
+# add new endpoint for user logout
+@router.post("/logout")
+def logout(access_token: str):
+    """
+    Logout the user.
+    """
+    try:
+        response = cognito_service.logout(access_token)
+        return response
+    except ServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
