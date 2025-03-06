@@ -65,6 +65,11 @@ function Login() {
           <button type="submit">Log In</button>
         </form>
         <p>
+          <Link to="/forgot-password" className={styles.forgotPasswordLink}>
+            Forgot Password?
+          </Link>
+        </p>
+        <p>
           Don't have an account? 
           <Link to="/register" className={styles.signUpLink}>
             Sign Up

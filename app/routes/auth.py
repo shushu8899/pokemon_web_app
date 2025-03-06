@@ -118,7 +118,7 @@ def delete_profile(username: str, service: CognitoService = Depends(), db: Sessi
 @router.post("/reset-password")
 def reset_password(email: str):
     """
-    Reset the user's password.
+    Reset the user's password by sending a verification code to the user's email .
     """
     try:
         response = cognito_service.reset_password(email)

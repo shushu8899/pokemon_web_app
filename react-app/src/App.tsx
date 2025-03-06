@@ -10,7 +10,8 @@ import SearchPage from "./components/SearchPage";
 // Add the components for Login and Register new user pages
 import Login from "./components/LoginPage"; // Import Login component
 import Register from "./components/RegistrationPage.tsx"; // Import Register component
-// import ResetPasswordPage from './components/ResetPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage.tsx'; // Import Reset Password component
+import ForgotPasswordPage from './components/ForgotPasswordPage.tsx'; // Import Forgot Password component
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -89,7 +90,8 @@ function App() {
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />
           <Route path="/login" element={<Login />} /> {/* Add Login route */}
           <Route path="/register" element={<Register />} /> {/* Add Register route */}
-          {/* <Route path="/reset-password" element={<ResetPasswordPage />} /> Add Reset Password route */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} /> Add Reset Password route
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Routes>
       </div>
     </div>
