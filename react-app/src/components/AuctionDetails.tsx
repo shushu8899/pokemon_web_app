@@ -96,7 +96,7 @@ const styles = {
 };
 
 const AuctionDetails: React.FC = () => {
-  const { auctionId } = useParams<{ auctionId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [auction, setAuction] = useState<MyAuction | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,13 +106,15 @@ const AuctionDetails: React.FC = () => {
   const [auctionDuration, setAuctionDuration] = useState<number>(24); // Default 24 hours
 
   useEffect(() => {
-    const loadAuctionDetails = async () => {
+    const fetchAuctionDetails = async () => {
+      if (!id) {
+        setError('Auction ID is required');
+        setLoading(false);
+        return;
+      }
+
       try {
-        if (!auctionId) {
-          setError('Auction ID is required');
-          return;
-        }
-        const data = await getAuctionDetails(parseInt(auctionId));
+        const data = await getAuctionDetails(parseInt(id));
         setAuction(data);
         setEditedAuction(data);
         
@@ -124,14 +126,14 @@ const AuctionDetails: React.FC = () => {
           setAuctionDuration(durationHours);
         }
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message || 'Failed to fetch auction details');
       } finally {
         setLoading(false);
       }
     };
 
-    loadAuctionDetails();
-  }, [auctionId]);
+    fetchAuctionDetails();
+  }, [id]);
 
   const calculateEndTime = (durationHours: number): string => {
     const endTime = new Date();
@@ -302,10 +304,16 @@ const AuctionDetails: React.FC = () => {
                     <input
                       type="text"
                       value={editedAuction?.CardName || ''}
-                      onChange={(e) => handleInputChange('CardName', e.target.value)}
-                      style={{ ...styles.input, margin: 0 }}
+                      style={{ 
+                        ...styles.input, 
+                        margin: 0, 
+                        backgroundColor: '#f5f5f5',
+                        color: '#666',
+                        cursor: 'not-allowed' 
+                      }}
                       placeholder="Card Name"
                       disabled
+                      readOnly
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
@@ -313,10 +321,16 @@ const AuctionDetails: React.FC = () => {
                     <input
                       type="text"
                       value={editedAuction?.CardQuality || ''}
-                      onChange={(e) => handleInputChange('CardQuality', e.target.value)}
-                      style={{ ...styles.input, margin: 0 }}
+                      style={{ 
+                        ...styles.input, 
+                        margin: 0, 
+                        backgroundColor: '#f5f5f5',
+                        color: '#666',
+                        cursor: 'not-allowed' 
+                      }}
                       placeholder="Card Quality"
                       disabled
+                      readOnly
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
