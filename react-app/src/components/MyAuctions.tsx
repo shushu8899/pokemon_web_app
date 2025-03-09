@@ -72,53 +72,55 @@ const MyAuctions: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-5 text-center">My Auctions</h1>
-      
-      {/* Auctions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {auctions.map((auction) => (
-          <div key={auction.AuctionID} className="bg-white rounded-lg shadow-lg p-4 relative">
-            {/* Status Badge */}
-            <div className="absolute top-2 right-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyle(auction.Status)}`}>
-                {auction.Status}
-              </span>
-            </div>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: "Roboto" }}>My Auctions</h1>
+        
+        {/* Auctions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {auctions.map((auction) => (
+            <div key={auction.AuctionID} className="bg-white rounded-lg shadow-lg p-4 relative">
+              {/* Status Badge */}
+              <div className="absolute top-2 right-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyle(auction.Status)}`}>
+                  {auction.Status}
+                </span>
+              </div>
 
-            {/* Card Image */}
-            <div className="aspect-w-3 aspect-h-4 mb-4 mt-10">
-              {auction.ImageURL && (
-                <img
-                  src={auction.ImageURL.startsWith('http') 
-                    ? auction.ImageURL 
-                    : `http://127.0.0.1:8000${auction.ImageURL}`}
-                  alt={auction.CardName}
-                  className="w-full h-64 object-contain rounded-lg"
-                />
-              )}
-            </div>
+              {/* Card Image */}
+              <div className="aspect-w-3 aspect-h-4 mb-4 mt-10">
+                {auction.ImageURL && (
+                  <img
+                    src={auction.ImageURL.startsWith('http') 
+                      ? auction.ImageURL 
+                      : `http://127.0.0.1:8000${auction.ImageURL}`}
+                    alt={auction.CardName}
+                    className="w-full h-64 object-contain rounded-lg"
+                  />
+                )}
+              </div>
 
-            {/* Auction Details */}
-            <div className="mt-4 text-center">
-              <h3 className="text-xl font-semibold mb-2">{auction.CardName}</h3>
-              <p className="text-gray-600">Quality: {auction.CardQuality}</p>
-              <p className="text-gray-600">
-                Current Bid: ${auction.HighestBidderID ? auction.HighestBid : '0'}
-              </p>
-              {!auction.HighestBidderID && (
-                <p className="text-gray-600">Starting Bid: ${auction.HighestBid}</p>
-              )}
-              <p className="text-gray-600">Ends: {new Date(auction.EndTime).toLocaleString()}</p>
-              <button 
-                onClick={() => handleViewDetails(auction.AuctionID)}
-                className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors"
-              >
-                View Details
-              </button>
+              {/* Auction Details */}
+              <div className="mt-4 text-center">
+                <h3 className="text-xl font-semibold mb-2">{auction.CardName}</h3>
+                <p className="text-gray-600">Quality: {auction.CardQuality}</p>
+                <p className="text-gray-600">
+                  Current Bid: ${auction.HighestBidderID ? auction.HighestBid : '0'}
+                </p>
+                {!auction.HighestBidderID && (
+                  <p className="text-gray-600">Starting Bid: ${auction.HighestBid}</p>
+                )}
+                <p className="text-gray-600">Ends: {new Date(auction.EndTime).toLocaleString()}</p>
+                <button 
+                  onClick={() => handleViewDetails(auction.AuctionID)}
+                  className="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors"
+                >
+                  View Details
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -2,14 +2,10 @@ import React, { useState } from "react";
 import axios from "axios";
 import pokemonSpinner from "../assets/pokeballloading.gif";
 import { getAuthorizationHeader } from "../services/auth-service";
+import { useNavigate } from "react-router-dom";
 
-interface UploadResponse {
-  message: string;
-  card_id: number;
-  image_url: string;
-}
-
-const UploadCard: React.FC = () => {
+const CardEntry: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +13,6 @@ const UploadCard: React.FC = () => {
   const [cardName, setCardName] = useState<string>("");
   const [cardQuality, setCardQuality] = useState<string>("MINT");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [verificationResult, setVerificationResult] = useState<UploadResponse | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -40,22 +35,24 @@ const UploadCard: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
-    setVerificationResult(null);
+    setError(null);
+    setSuccessMessage(null);
 
     const formData = new FormData();
+    formData.append("card_name", cardName);
+    formData.append("card_quality", cardQuality);
     if (selectedFile) {
-      formData.append("file", selectedFile);
+      formData.append("image", selectedFile);
     }
 
     try {
       const authHeader = getAuthorizationHeader();
       if (!authHeader) {
-        throw new Error('You must be logged in to verify cards');
+        throw new Error('You must be logged in to create a card entry');
       }
 
-      const response = await axios.post<UploadResponse>(
-        "http://127.0.0.1:8000/verify-card",
+      await axios.post(
+        "http://127.0.0.1:8000/entry/card-entry/create",
         formData,
         {
           headers: {
@@ -65,10 +62,21 @@ const UploadCard: React.FC = () => {
         }
       );
 
-      setVerificationResult(response.data);
+      setSuccessMessage("Card entry created successfully!");
+      // Clear form
+      setCardName("");
+      setCardQuality("MINT");
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      
+      // Redirect to My Cards page after successful creation
+      setTimeout(() => {
+        navigate('/my-cards');
+      }, 2000);
+
     } catch (error: any) {
-      console.error("Error verifying card:", error);
-      setError(error.response?.data?.detail || "Failed to verify card. Please try again.");
+      console.error("Error creating card entry:", error);
+      setError(error.response?.data?.detail || "Failed to create card entry. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +85,7 @@ const UploadCard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow">
-        <h1 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: "Roboto" }}>Verify Card</h1>
+        <h1 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: "Roboto" }}>Upload a Card</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Card Name Input */}
@@ -145,6 +153,7 @@ const UploadCard: React.FC = () => {
                       className="sr-only"
                       onChange={handleFileSelect}
                       accept="image/*"
+                      required
                     />
                   </label>
                   <p className="pl-1">or drag and drop</p>
@@ -170,21 +179,10 @@ const UploadCard: React.FC = () => {
           {/* Success Message */}
           {successMessage && (
             <div className="rounded-md bg-green-50 p-4">
-              <div className="flex justify-center">
-                <p className="text-[8px] font-light text-green-800 text-center">
-                  {successMessage}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Verification Result */}
-          {verificationResult && (
-            <div className="rounded-md bg-blue-50 p-4">
               <div className="flex">
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">
-                    Verification Result: {verificationResult.message}
+                  <h3 className="text-sm font-medium text-green-800">
+                    {successMessage}
                   </h3>
                 </div>
               </div>
@@ -204,10 +202,10 @@ const UploadCard: React.FC = () => {
             {isLoading ? (
               <div className="flex items-center">
                 <img src={pokemonSpinner} alt="Loading..." className="w-5 h-5 mr-2" />
-                <span>Verifying...</span>
+                <span>Creating...</span>
               </div>
             ) : (
-              'Verify Card'
+              'Upload Card'
             )}
           </button>
         </form>
@@ -216,5 +214,4 @@ const UploadCard: React.FC = () => {
   );
 };
 
-export default UploadCard;
-
+export default CardEntry; 
