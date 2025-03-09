@@ -109,8 +109,14 @@ def get_my_auctions(
     try:
         auctions = service.get_auctions_by_seller(user_id)
         result = []
+        current_time = datetime.utcnow()
         
         for auction in auctions:
+            # Update status if auction has ended
+            if auction.EndTime < current_time and auction.Status != "Closed":
+                auction.Status = "Closed"
+                db.commit()
+
             # Get card details for this auction
             card = db.query(Card).filter(Card.CardID == auction.CardID).first()
             if card:
@@ -147,8 +153,12 @@ def update_auction(
     db: Session = Depends(get_db)
 ):
     """
-    Update an auction's details. If there's no highest bidder,
-    the highest_bid will be set equal to the starting_bid.
+    Update an auction's details. 
+    Conditions for updating an auction:
+    - The auction must not be closed
+    - There must not be any bids yet (no highest bidder)
+    - The user must be the seller of the auction
+    - If there's no highest bidder, the highest_bid will be set equal to the starting_bid
     """
     cognito_id = auth_info.get("sub")
     try:
@@ -156,6 +166,10 @@ def update_auction(
         auction = service.get_auction_by_id(auction_id)
         if not auction:
             raise HTTPException(status_code=404, detail="Auction not found")
+
+        # Check if the auction is closed before attempting to update
+        if auction.Status == "Closed":
+            raise HTTPException(status_code=403, detail="Cannot update a closed auction")
 
         # Update the auction with the new values
         updated_auction = service.update_auction(

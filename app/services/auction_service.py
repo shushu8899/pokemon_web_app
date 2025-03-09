@@ -17,6 +17,7 @@ import shutil
 import uuid
 import logging
 from typing import Union
+from app.exceptions import ServiceException
 
 
 class AuctionService:
@@ -133,7 +134,10 @@ class AuctionService:
         """
         Get specific auction by auction ID
         """
-        return self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
+        auction = self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
+        if auction:
+            self._update_auction_status(auction)
+        return auction
 
     def create_auction(self, user_id: int, card_id: int, starting_bid: float, minimum_increment: float, auction_duration: float):
         """
@@ -207,7 +211,11 @@ class AuctionService:
         """
         Retrieve auctions by seller ID
         """
-        return self.db.query(Auction).filter(Auction.SellerID == seller_id).all()
+        auctions = self.db.query(Auction).filter(Auction.SellerID == seller_id).all()
+        # Update status for each auction
+        for auction in auctions:
+            self._update_auction_status(auction)
+        return auctions
     
     def update_auction(self, auction_id: int, cognito_user_id: str, minimum_increment: float, starting_bid: float, auction_duration: float, profile_service: ProfileService):
         """
@@ -226,6 +234,10 @@ class AuctionService:
         # Check if the user is the seller
         if auction.SellerID != user_id:
             raise HTTPException(status_code=403, detail="You do not have permission to update this auction")
+
+        # Check if the auction is closed
+        if auction.Status == "Closed":
+            raise HTTPException(status_code=403, detail="Cannot update a closed auction")
 
         # Check if the HighestBidderID is not None
         if auction.HighestBidderID is not None:
@@ -420,3 +432,10 @@ class AuctionService:
             )
             for row in winning_auctions
         ]
+
+    def _update_auction_status(self, auction: Auction) -> None:
+        """Update auction status based on end time"""
+        current_time = datetime.now()
+        if auction.EndTime < current_time and auction.Status != "Closed":
+            auction.Status = "Closed"
+            self.db.commit()
