@@ -74,12 +74,13 @@ async def update_card_entry(
     card_id: int = Form(...),
     card_name: str = Form(...),
     card_quality: str = Form(...),
-    image: UploadFile = File(...),
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
     auth_info: dict = Depends(get_current_user)
 ):
     """
     Users (admins and regular users) can update a Pokémon card entry with details.
+    Image upload is optional during update.
     """
     cognito_user_id = auth_info.get("sub")
 
@@ -95,27 +96,39 @@ async def update_card_entry(
     if not existing_card:
         raise HTTPException(status_code=404, detail="Card not found for this user")
 
-    # Generate a unique filename for the image
-    unique_filename = f"{uuid.uuid4()}_{image.filename}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-    
-    # Save Image to Upload Directory
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
+    # Update image only if a new one is provided
+    if image:
+        # Generate a unique filename for the image
+        unique_filename = f"{uuid.uuid4()}_{image.filename}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        # Save Image to Upload Directory
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
 
-    image_url = f"/static/uploads/{unique_filename}"
+        # Delete old image if it exists
+        if existing_card.ImageURL and existing_card.ImageURL.startswith("/static/uploads/"):
+            old_image_path = os.path.join("static", "uploads", os.path.basename(existing_card.ImageURL))
+            try:
+                if os.path.exists(old_image_path):
+                    os.remove(old_image_path)
+            except Exception as e:
+                print(f"Error deleting old image file: {e}")
 
-    # Update the existing card
+        existing_card.ImageURL = f"/static/uploads/{unique_filename}"
+
+    # Update the card details
     existing_card.CardName = card_name
     existing_card.CardQuality = card_quality
-    existing_card.ImageURL = image_url
+    existing_card.IsValidated = False  # Reset validation status when card is updated
     db.commit()
     db.refresh(existing_card)
 
     return {
         "message": "Card updated successfully",
         "card_id": existing_card.CardID,
-        "updated_image_url": image_url
+        "updated_image_url": existing_card.ImageURL,
+        "is_validated": existing_card.IsValidated
     }
 
 @router.get("/my-cards", dependencies=[Depends(req_user_or_admin)])
@@ -173,3 +186,72 @@ async def get_my_cards(
             "has_previous": page > 1
         }
     }
+
+@router.get("/card-entry/{card_id}", dependencies=[Depends(req_user_or_admin)])
+async def get_card_details(
+    card_id: int,
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    Get details of a specific card. Users can only view their own cards.
+    """
+    cognito_user_id = auth_info.get("sub")
+
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    owner_id = user_profile.UserID
+
+    # Retrieve the card
+    card = db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == owner_id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found or you don't have permission to view it")
+
+    return {
+        "card_id": card.CardID,
+        "card_name": card.CardName,
+        "card_quality": card.CardQuality,
+        "is_validated": card.IsValidated,
+        "image_url": card.ImageURL
+    }
+
+@router.delete("/card-entry/{card_id}", dependencies=[Depends(req_user_or_admin)])
+async def delete_card(
+    card_id: int,
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    Delete a specific card. Users can only delete their own cards.
+    """
+    cognito_user_id = auth_info.get("sub")
+
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    owner_id = user_profile.UserID
+
+    # Retrieve the card
+    card = db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == owner_id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found or you don't have permission to delete it")
+
+    # Delete the associated image file if it exists
+    if card.ImageURL and card.ImageURL.startswith("/static/uploads/"):
+        image_path = os.path.join("static", "uploads", os.path.basename(card.ImageURL))
+        try:
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        except Exception as e:
+            print(f"Error deleting image file: {e}")
+
+    # Delete the card from the database
+    db.delete(card)
+    db.commit()
+
+    return {"message": "Card deleted successfully"}

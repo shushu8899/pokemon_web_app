@@ -19,6 +19,7 @@ import LoginPage from "./components/LoginPage";
 import RegistrationPage from "./components/RegistrationPage";
 import ForgotPasswordPage from "./components/ForgotPasswordPage";
 import ResetPasswordPage from "./components/ResetPasswordPage";
+import EditCard from './components/EditCard';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -212,42 +213,22 @@ function App() {
       <div className="flex-grow">
         <Routes>
           <Route path="/" element={<AuctionList />} />
-          <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
-          
-          {/* Protected Routes */}
-          <Route path="/create-auction" element={
-            <ProtectedRoute>
-              <AuctionCreation />
-            </ProtectedRoute>
-          } />
-          <Route path="/my-auctions" element={
-            <ProtectedRoute>
-              <MyAuctions />
-            </ProtectedRoute>
-          } />
-          <Route path="/update-auction/:auctionId" element={
-            <ProtectedRoute>
-              <AuctionCreation />
-            </ProtectedRoute>
-          } />
-          <Route path="/auction/:auctionId" element={<AuctionDetails />} />
-          <Route path="/bidding/:auctionID" element={<BiddingPage />} />
-          <Route path="/upload-card" element={
-            <ProtectedRoute>
-              <UploadCard />
-            </ProtectedRoute>
-          } />
-          <Route path="/my-cards" element={
-            <ProtectedRoute>
-              <MyCards />
-            </ProtectedRoute>
-          } />
-          
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUserEmail={setUserEmail} />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          
+          {/* Protected Routes */}
+          <Route path="/upload-card" element={<ProtectedRoute><UploadCard /></ProtectedRoute>} />
+          <Route path="/my-cards" element={<ProtectedRoute><MyCards /></ProtectedRoute>} />
+          <Route path="/entry/card-entry/update" element={<ProtectedRoute><EditCard /></ProtectedRoute>} />
+          <Route path="/my-auctions" element={<ProtectedRoute><MyAuctions /></ProtectedRoute>} />
+          <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
+          <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
+          
+          {/* Public Routes */}
+          <Route path="/bidding/:auctionID" element={<BiddingPage />} />
           
           {/* Catch-all redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
