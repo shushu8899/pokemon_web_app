@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile, Query, BackgroundTasks, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from app.services.auction_service import AuctionService
-from app.services.profile_service import ProfileService
+from app.services.profile_service import ProfileService, get_current_user
 from sqlalchemy.orm import Session
-from app.models.auction import Auction, AuctionInfo, AuctionBid
+from app.models.auction import Auction, AuctionInfo, AuctionBid, AuctionResponse
 from app.models.card import Card
 from app.dependencies.services import get_auction_service, get_profile_service
 from pydantic import BaseModel
@@ -23,6 +23,7 @@ import os
 
 from app.db.db import get_db
 from app.routes.auth import cognito_service
+from app.dependencies.auth import req_user_role, req_admin_role
 
 router = APIRouter()
 
@@ -36,6 +37,7 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
         auction["EndTime"] = auction["EndTime"].timestamp()
     return {"auctions": auctions, "total_pages": int(total_pages)}
 
+<<<<<<< HEAD
 @router.get("/auction-details/{auction_id}")
 async def display_auction_details(auction_id:int, auction_service: AuctionService = Depends(get_auction_service)):
     auction = auction_service.get_auctions_details(auction_id)
@@ -47,15 +49,71 @@ async def display_auction_details(auction_id:int, auction_service: AuctionServic
 @router.post("/place-bid",status_code= status.HTTP_200_OK, dependencies=[Depends(req_user_role)])
 async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depends(get_auction_service), profile_service: ProfileService = Depends(get_profile_service), auth_info: dict = Depends(req_user_role)):  # ✅ Require authentication
     cognito_id = auth_info.get("username")
+=======
+@router.get("/auction-details/{auction_id}", response_model=dict)
+def display_auction_details(
+    auction_id: int,
+    service: AuctionService = Depends(get_auction_service),
+    db: Session = Depends(get_db)
+):
+    try:
+        auction_details = service.get_auctions_details(auction_id)
+        return auction_details
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/place-bid/{auction_id}", response_model=AuctionResponse, dependencies=[Depends(req_user_role)])
+async def place_bid(
+    auction_id: int,
+    bid_amount: float = Form(...),
+    auction_service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    cognito_id = auth_info.get("sub")
+>>>>>>> 880760880a492f5f11a99f9c9597bdd2da84e4bb
     user_id = profile_service.get_profile_id(cognito_id)
     if not user_id:
         raise HTTPException(status_code=404, detail="User not found")
-    auction = auction_service.bid_auction(user_id, bid_info)
-    if auction:
+    bid_info = AuctionBid(AuctionID=auction_id, BidAmount=bid_amount)
+    try:
+        auction = auction_service.bid_auction(cognito_id, bid_info, profile_service)
+        if not auction:
+            raise HTTPException(status_code=400, detail="Failed to place bid")
         return auction
+<<<<<<< HEAD
     else:
         print(auction)
         raise HTTPException(status_code=400, detail="Failed to place bid")
+=======
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/winning-auctions", response_model=list)
+def get_winning_auctions(
+    auth_info: dict = Depends(get_current_user),
+    service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
+    db: Session = Depends(get_db)
+):
+    cognito_id = auth_info.get("sub")
+    user_id = profile_service.get_profile_id(cognito_id)
+    if not user_id:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        winning_auctions = service.show_winning_auctions(user_id)
+        return winning_auctions
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+>>>>>>> 880760880a492f5f11a99f9c9597bdd2da84e4bb
 
 @router.get("/notifications/{auction_id}")
 async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
@@ -63,7 +121,8 @@ async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
     result = [{"auction_id": n.AuctionID, "message": n.Message, "timestamp": n.TimeSent.isoformat()} for n in notifications]
     return JSONResponse(content=result)
 
-@router.post("/cleanup_auctions")
-def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@router.post("/cleanup_auctions", dependencies=[Depends(req_admin_role)])
+def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db), auth_info: dict = Depends(get_current_user)):
     AuctionService.schedule_auction_cleanup(background_tasks, db)
-    return {"message": "Auction cleanup scheduled"}
+    return {"message": "Auction cleanup scheduled."}
+
