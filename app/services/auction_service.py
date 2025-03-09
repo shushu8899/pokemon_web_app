@@ -249,7 +249,7 @@ class AuctionService:
         # Update the auction record
         auction.MinimumIncrement = minimum_increment
         auction.EndTime = end_time
-        auction.StartingBid = starting_bid
+        auction.HighestBid = starting_bid  # Update HighestBid to match starting_bid
 
         # Compare current datetime vs end time of the auction
         current_time = datetime.now()
@@ -379,3 +379,44 @@ class AuctionService:
     def schedule_auction_cleanup(background_tasks: BackgroundTasks, db: Session):
         auction_service = AuctionService(db)
         background_tasks.add_task(auction_service.end_expired_auctions)
+
+    def show_winning_auctions(self, user_id: int):
+        """
+        Get all auctions that the user has won (status "Closed" and highest bidder ID = user ID)
+        """
+        winning_auctions = (
+            self.db.query(
+                Auction.AuctionID,
+                Auction.CardID,
+                Auction.Status,
+                Auction.HighestBid,
+                Auction.EndTime,
+                Card.IsValidated,
+                Card.CardName,
+                Card.CardQuality,
+                Card.ImageURL,  # Include ImageURL from Card
+            )
+            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
+            .filter(Auction.Status == "Closed", Auction.HighestBidderID == user_id)  # Only include closed auctions won by the user
+            .order_by(Auction.EndTime.desc())  # Sort by latest expiration
+            .all()
+        )
+
+        return [
+            dict(
+                zip(
+                    [
+                        "AuctionID",
+                        "CardID",
+                        "HighestBid",
+                        "EndTime",
+                        "IsValidated",
+                        "CardName",
+                        "CardQuality",
+                        "ImageURL",
+                    ],
+                    row,
+                )
+            )
+            for row in winning_auctions
+        ]

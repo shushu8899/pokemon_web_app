@@ -4,9 +4,10 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
+from fastapi.staticfiles import StaticFiles
 import logging
 
-from app.routes import search, seller_submission, card_verification, auth, auction_page,pokemon_rag 
+from app.routes import search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating, card_entry, profile
 from app.exceptions import ServiceException
 
 # Import the HTTPBearer class
@@ -22,6 +23,9 @@ app = FastAPI(
     description="This API provides endpoints for the Pokémon Card Auction Platform.",
     version="1.0.0"
 )
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Enable CORS
 app.add_middleware(
@@ -61,11 +65,14 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Register routes
 app.include_router(auth.router, prefix="", tags=["Authentication"])
+app.include_router(card_entry.router, prefix="/entry", tags=["Card Entry"])
 app.include_router(card_verification.router, prefix="/verification", tags=["Verification"])
 app.include_router(seller_submission.router, prefix="/auction", tags=["Submission"])
 app.include_router(auction_page.router, prefix="/bidding", tags=["Auction Page"])
-app.include_router(search.router, tags=["Search"])
+app.include_router(profile_rating.router, prefix="/profile", tags=["Rate the Seller"])
+app.include_router(search.router, prefix="/api", tags=["Search"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
+app.include_router(profile.router, tags=["Profile"])
 
 @app.get("/")
 def read_root():

@@ -1,27 +1,34 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
-import axios from "axios";
-import Logo from "./assets/logo.svg.png"; // Ensure the file exists in src/assets
-import mainpic from "./assets/image_2025-03-02_15-25-55.png"; // Ensure the file exists in src/assets
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import Logo from "./assets/logo.svg.png";
+import bannerImage from "./assets/Pokemon Card Banner.png";
+import { BrowserRouter as Router } from 'react-router-dom';
 
 // Components
 import AuctionList from "./components/list-grp";
 import BiddingPage from "./components/auction-details";
 import SearchPage from "./components/SearchPage";
-import VerifyCard from "./components/verify-card";
+import UploadCard from "./components/verify-card";
+import AuctionCreation from "./components/AuctionCreation";
+import MyCards from "./components/MyCards";
+import MyAuctions from "./components/MyAuctions";
+import AuctionDetails from './components/AuctionDetails';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
+import { initializeDefaultAuth } from "./services/auth-service";
 
 function App() {
   const location = useLocation();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
+  // Initialize default authentication on app start
+  useEffect(() => {
+    initializeDefaultAuth();
+  }, []);
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
       {/* Top Bar */}
-      <div className="flex items-center w-full px-6 py-3 shadow-md">
+      <div className="flex items-center w-full px-6 py-3 shadow-md relative z-50 bg-white">
         {/* Logo */}
         <img
           src={Logo}
@@ -30,78 +37,88 @@ function App() {
         />
 
         {/* Navigation Panel */}
-        <div className="ml-auto space-x-4">
+        <div className="ml-auto flex items-center gap-4">
           <Link to="/">
-            <button className="w-40 py-2 text-black font-bold hover:bg-gray-100" style={{ borderRadius: "100px", fontFamily: "Roboto"}}>
+            <button className="w-40 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px", fontFamily: "Roboto"}}>
               Main
             </button>
           </Link>
           <div className="relative inline-block text-left group">
             <button
-              className="w-40 py-2 text-black font-bold border-red-400 hover:bg-red-100"
+              className="w-40 py-2 text-black font-bold hover:bg-yellow-500"
               style={{ borderRadius: "100px", fontFamily: "Roboto" }}
             >
-              Auction
+              Card
             </button>
-            <div className="origin-top-right absolute left-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block" >
+            <div className="origin-top-right absolute left-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-50" >
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                <Link to="/auction/1" className="block px-4 py-2 text-gray-700 hover:bg-red-100" role="menuitem">
+                <Link to="/upload-card" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
                   <button className="text-black font-bold">
-                  Create auction
+                    Upload Card
                   </button>
                 </Link>
-                <Link to="/verify-card" className="block px-4 py-2 text-gray-700 hover:bg-red-100" role="menuitem">
+                <Link to="/my-cards" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
                   <button className="text-black font-bold">
-                  Verify card
+                    My Cards
                   </button>
                 </Link>
               </div>
             </div>
           </div>
-          <Link to="/login">
-            <button className="w-32 py-2 text-black font-bold border-green-400 hover:bg-green-100" style={{ borderRadius: "100px", fontFamily: "Roboto" }}>
-              Account
+          <div className="relative inline-block text-left group">
+            <button
+              className="w-40 py-2 text-black font-bold hover:bg-yellow-500"
+              style={{ borderRadius: "100px", fontFamily: "Roboto" }}
+            >
+              Auction
             </button>
-          </Link>
+            <div className="origin-top-right absolute left-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-50" >
+              <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                <Link to="/create-auction" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                  <button className="text-black font-bold">
+                    Create Auction
+                  </button>
+                </Link>
+                <Link to="/my-auctions" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                  <button className="text-black font-bold">
+                    My Auctions
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
           <Link to="/search">
-            <button className="w-10 py-2 text-black font-bold bg-blue-200" style={{ borderRadius: "100px" }}>
+            <button className="w-10 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px" }}>
               {"\u2315"}
             </button>
           </Link>
         </div>
       </div>
 
-      {/* Landing Page Content */}
+      {/* Hero Banner Section - Only shown on main page */}
       {location.pathname === "/" && (
-        <div 
-          className="grid grid-cols-1 md:grid-cols-2 p-8 mt-8 mx-8 md:my-8"
-          style={{ 
-            borderRadius: "50px", 
-            boxShadow: "10px 10px 6px rgba(105, 105, 104, 0.5)", 
-            height: "60vh",
-            backgroundColor: "#FFCB05"}}>
-          {/* Left Side - Text */}
-          <div className="flex flex-col items-center justify-center space-y-6 font-roboto">
-            <h1 className="text-4xl font-bold text-black">Welcome to Pokémon TCG Auction</h1>
-            <p className="text-lg justify-center font-roboto" 
-                style={{ color: "black"}}>
-              Discover amazing auctions, bid with confidence, and find the best deals.
+        <div className="relative h-[75vh] w-full" style={{ marginTop: "-48px" }}>
+          <img
+            src={bannerImage}
+            alt="Pokemon Card Banner"
+            className="w-full h-full object-cover"
+          />
+          <div 
+            className="absolute inset-0 flex flex-col items-center justify-center text-center"
+            style={{ background: 'rgba(0, 0, 0, 0.7)', paddingTop: '80px' }}
+          >
+            <h1 className="text-5xl font-bold text-white mb-4">
+              Welcome to the Pokémon TCG Auction House
+            </h1>
+            <p className="text-xl text-white mb-6 max-w-2xl px-4">
+              Discover amazing auctions, find the best deals, and bid with confidence.
             </p>
             <button 
-              className="px-6 py-3 bg-red-500 text-white hover:bg-gray-600 transition" 
-              style={{ borderRadius: "100px" }}>
+              onClick={() => window.scrollTo({ top: window.innerHeight * 0.75, behavior: 'smooth' })}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full transform transition-transform hover:scale-105"
+            >
               Get Started
             </button>
-          </div>
-
-          {/* Right Side - Image */}
-          <div className="justify-center p-1 flex">
-            <img
-              src={mainpic}
-              alt="Landing page pic"
-              className="rounded-lg justify-center " 
-              style={{ borderRadius: "30px"}}
-            />
           </div>
         </div>
       )}
@@ -112,7 +129,15 @@ function App() {
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />
-          <Route path="/verify-card" element={<VerifyCard />} />
+          <Route path="/upload-card" element={<UploadCard />} />
+          <Route path="/create-auction" element={<AuctionCreation />} />
+          <Route path="/my-cards" element={<MyCards />} />
+          <Route path="/my-auctions" element={<MyAuctions />} />
+          <Route path="/auction/:auctionId" element={<AuctionDetails />} />
+          <Route path="/update-auction/:auctionId" element={<AuctionCreation />} />
+          
+          {/* Catch-all redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </div>
