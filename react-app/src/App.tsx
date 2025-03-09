@@ -1,8 +1,9 @@
-import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { Routes, Route, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Logo from "./assets/logo.svg.png";
 import bannerImage from "./assets/Pokemon Card Banner.png";
 import { BrowserRouter as Router } from 'react-router-dom';
+import { clearAuthTokens, getUserEmail } from './services/auth-service';
 
 // Components
 import AuctionList from "./components/list-grp";
@@ -21,13 +22,49 @@ import ResetPasswordPage from "./components/ResetPasswordPage";
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
 
+// Protected Route Component
+interface ProtectedRouteProps {
+  isLoggedIn: boolean;
+  children: React.ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ isLoggedIn, children }) => {
+  const location = useLocation();
+  
+  if (!isLoggedIn) {
+    // Redirect to login page with the return url
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check login status when component mounts
+    const email = getUserEmail();
+    if (email) {
+      setIsLoggedIn(true);
+      setUserEmail(email);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    clearAuthTokens();
+    setIsLoggedIn(false);
+    setUserEmail(null);
+    navigate('/');
+  };
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
       {/* Top Bar */}
-      <div className="flex items-center w-full px-6 py-3 shadow-md relative z-50 bg-white">
+      <div className="flex items-center w-full px-6 py-3 bg-white fixed top-0 left-0 right-0 z-[100] shadow-[0_8px_16px_-4px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] border-b border-gray-100">
         {/* Logo */}
         <img
           src={Logo}
@@ -86,11 +123,51 @@ function App() {
               </div>
             </div>
           </div>
-          <Link to="/login">
-            <button className="w-40 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px", fontFamily: "Roboto" }}>
-              Login / Sign Up
-            </button>
-          </Link>
+          
+          {/* Conditional rendering of Login/Account button */}
+          {isLoggedIn ? (
+            <div className="relative inline-block text-left group">
+              <button
+                className="w-40 py-2 text-black font-bold hover:bg-yellow-500"
+                style={{ borderRadius: "100px", fontFamily: "Roboto" }}
+              >
+                Account
+              </button>
+              <div 
+                className="absolute right-0 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-50"
+                style={{ 
+                  minWidth: '200px',
+                  width: userEmail ? `${Math.max(200, userEmail.length * 8)}px` : '200px',
+                  top: 'calc(100% - 5px)'  // Reduce the gap between button and menu
+                }}
+              >
+                <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                  <div className="block px-4 py-2 text-sm text-gray-500 border-b border-gray-200 truncate">
+                    {userEmail}
+                  </div>
+                  <Link to="/profile" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                    <button className="text-black font-bold w-full text-left">
+                      Profile
+                    </button>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-black font-bold hover:bg-yellow-500"
+                    role="menuitem"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Link to="/login">
+              <button className="w-40 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px", fontFamily: "Roboto" }}>
+                Login / Sign Up
+              </button>
+            </Link>
+          )}
+
           <Link to="/search">
             <button className="w-10 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px" }}>
               {"\u2315"}
@@ -99,9 +176,12 @@ function App() {
         </div>
       </div>
 
-      {/* Hero Banner Section - Only shown on main page */}
+      {/* Spacer for fixed navbar */}
+      <div className="h-[72px]"></div>
+
+      {/* Banner Image */}
       {location.pathname === "/" && (
-        <div className="relative h-[75vh] w-full" style={{ marginTop: "-48px" }}>
+        <div className="relative h-[75vh] z-[1]">
           <img
             src={bannerImage}
             alt="Pokemon Card Banner"
@@ -109,17 +189,18 @@ function App() {
           />
           <div 
             className="absolute inset-0 flex flex-col items-center justify-center text-center"
-            style={{ background: 'rgba(0, 0, 0, 0.7)', paddingTop: '80px' }}
+            style={{ background: 'rgba(0, 0, 0, 0.6)' }}
           >
-            <h1 className="text-5xl font-bold text-white mb-4">
+            <h1 className="text-5xl font-bold text-white mb-6" style={{ fontFamily: "Roboto" }}>
               Welcome to the Pokémon TCG Auction House
             </h1>
-            <p className="text-xl text-white mb-6 max-w-2xl px-4">
+            <p className="text-xl text-white mb-8 max-w-2xl px-4" style={{ fontFamily: "Roboto" }}>
               Discover amazing auctions, find the best deals, and bid with confidence.
             </p>
             <button 
               onClick={() => window.scrollTo({ top: window.innerHeight * 0.75, behavior: 'smooth' })}
               className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-full transform transition-transform hover:scale-105"
+              style={{ fontFamily: "Roboto" }}
             >
               Get Started
             </button>
@@ -133,13 +214,37 @@ function App() {
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />
-          <Route path="/upload-card" element={<UploadCard />} />
-          <Route path="/create-auction" element={<AuctionCreation />} />
-          <Route path="/my-cards" element={<MyCards />} />
-          <Route path="/my-auctions" element={<MyAuctions />} />
+          
+          {/* Protected Routes */}
+          <Route path="/upload-card" element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <UploadCard />
+            </ProtectedRoute>
+          } />
+          <Route path="/create-auction" element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <AuctionCreation />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-cards" element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <MyCards />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-auctions" element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <MyAuctions />
+            </ProtectedRoute>
+          } />
+          <Route path="/update-auction/:auctionId" element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <AuctionCreation />
+            </ProtectedRoute>
+          } />
+          
+          {/* Public Routes */}
           <Route path="/auction/:auctionId" element={<AuctionDetails />} />
-          <Route path="/update-auction/:auctionId" element={<AuctionCreation />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUserEmail={setUserEmail} />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />

@@ -1,7 +1,7 @@
 // src/components/LoginPage.tsx
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import styles from './LoginPage.module.css'; // Import the CSS module
 import { setAuthTokens } from '../services/auth-service';
 
@@ -14,11 +14,17 @@ interface LoginResponse {
   };
 }
 
-function Login() {
+interface LoginProps {
+  setIsLoggedIn: (isLoggedIn: boolean) => void;
+  setUserEmail: (email: string) => void;
+}
+
+function Login({ setIsLoggedIn, setUserEmail }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,8 +36,13 @@ function Login() {
       // We're using the access_token for Bearer authentication
       setAuthTokens(response.data.tokens.access_token, email);
       
-      // Redirect to home page
-      navigate('/');
+      // Update login state and user email
+      setIsLoggedIn(true);
+      setUserEmail(email);
+      
+      // Get the return URL from location state, or default to home page
+      const from = (location.state as any)?.from?.pathname || '/';
+      navigate(from);
     } catch (error: any) {
       console.error('Login failed:', error.response?.data);
       setError(error.response?.data?.detail || 'Login failed. Please check your credentials and try again.');
