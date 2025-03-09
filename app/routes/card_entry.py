@@ -187,6 +187,41 @@ async def get_my_cards(
         }
     }
 
+@router.get("/card-entry/unvalidated", dependencies=[Depends(req_user_or_admin)])
+async def get_unvalidated_cards(
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    Get all unvalidated cards (IsValidated = False) owned by the currently logged-in user.
+    """
+    cognito_user_id = auth_info.get("sub")
+
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    owner_id = user_profile.UserID
+
+    # Get all unvalidated cards for the user
+    unvalidated_cards = db.query(Card).filter(
+        Card.OwnerID == owner_id,
+        Card.IsValidated == False
+    ).all()
+
+    return [
+        {
+            "CardID": card.CardID,
+            "CardName": card.CardName,
+            "CardQuality": card.CardQuality,
+            "ImageURL": card.ImageURL,
+            "IsValidated": card.IsValidated,
+            "OwnerID": card.OwnerID
+        }
+        for card in unvalidated_cards
+    ]
+
 @router.get("/card-entry/{card_id}", dependencies=[Depends(req_user_or_admin)])
 async def get_card_details(
     card_id: int,

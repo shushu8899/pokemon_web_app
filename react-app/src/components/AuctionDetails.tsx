@@ -243,24 +243,24 @@ const AuctionDetails: React.FC = () => {
                   style={{
                     ...styles.button,
                     ...styles.primaryButton,
-                    opacity: auction.HighestBidderID ? 0.5 : 1,
-                    cursor: auction.HighestBidderID ? 'not-allowed' : 'pointer'
+                    opacity: auction.HighestBidderID || auction.Status === "Closed" ? 0.5 : 1,
+                    cursor: auction.HighestBidderID || auction.Status === "Closed" ? 'not-allowed' : 'pointer'
                   }}
-                  disabled={auction.HighestBidderID !== null}
-                  title={auction.HighestBidderID ? "Cannot edit auction with active bids" : "Edit Auction"}
+                  disabled={auction.HighestBidderID !== null || auction.Status === "Closed"}
+                  title={
+                    auction.Status === "Closed" 
+                      ? "Cannot edit closed auctions" 
+                      : auction.HighestBidderID 
+                        ? "Cannot edit auction with active bids" 
+                        : "Edit Auction"
+                  }
                 >
                   Edit Auction
                 </button>
                 <button 
                   onClick={handleDelete} 
-                  style={{
-                    ...styles.button,
-                    ...styles.dangerButton,
-                    opacity: auction.HighestBidderID ? 0.5 : 1,
-                    cursor: auction.HighestBidderID ? 'not-allowed' : 'pointer'
-                  }}
+                  style={{...styles.button, ...styles.dangerButton}}
                   disabled={auction.HighestBidderID !== null}
-                  title={auction.HighestBidderID ? "Cannot delete auction with active bids" : "Delete Auction"}
                 >
                   Delete Auction
                 </button>

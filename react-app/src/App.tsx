@@ -22,6 +22,7 @@ import ResetPasswordPage from "./components/ResetPasswordPage";
 import EditCard from './components/EditCard';
 import Profile from './components/Profile';
 import CardEntry from "./components/CardEntry";
+import UnvalidatedCards from './components/UnvalidatedCards';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -96,7 +97,7 @@ function App() {
                     Upload Card
                   </button>
                 </Link>
-                <Link to="/verify-card" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                <Link to="/unvalidated-cards" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
                   <button className="text-black font-bold">
                     Verify Card
                   </button>
@@ -228,7 +229,7 @@ function App() {
           
           {/* Protected Routes */}
           <Route path="/card-entry" element={<ProtectedRoute><CardEntry /></ProtectedRoute>} />
-          <Route path="/verify-card" element={<ProtectedRoute><UploadCard /></ProtectedRoute>} />
+          <Route path="/unvalidated-cards" element={<ProtectedRoute><UnvalidatedCards /></ProtectedRoute>} />
           <Route path="/my-cards" element={<ProtectedRoute><MyCards /></ProtectedRoute>} />
           <Route path="/entry/card-entry/update" element={<ProtectedRoute><EditCard /></ProtectedRoute>} />
           <Route path="/my-auctions" element={<ProtectedRoute><MyAuctions /></ProtectedRoute>} />
