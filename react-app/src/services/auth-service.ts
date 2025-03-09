@@ -1,6 +1,5 @@
 // Token management
 export const setAuthTokens = (accessToken: string, email: string) => {
-    // Store the raw access token without 'Bearer ' prefix
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('user_email', email);
 };
@@ -13,8 +12,8 @@ export const getAccessToken = () => {
 
 // Get the access token with Bearer prefix for Authorization header
 export const getAuthorizationHeader = () => {
-    const token = getAccessToken();
-    return token ? `Bearer ${token}` : null;
+    const token = localStorage.getItem('access_token');
+    return token ? `Bearer ${token}` : '';
 };
 
 // Get the user email
@@ -26,4 +25,8 @@ export const getUserEmail = () => {
 export const clearAuthTokens = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_email');
+};
+
+export const isAuthenticated = () => {
+    return !!localStorage.getItem('access_token');
 }; 

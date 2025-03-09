@@ -2,8 +2,9 @@ import { Routes, Route, Link, useLocation, useNavigate, Navigate } from "react-r
 import { useEffect, useState } from "react";
 import Logo from "./assets/logo.svg.png";
 import bannerImage from "./assets/Pokemon Card Banner.png";
+import pikachuPattern from "./assets/pikachu_pattern.png";
 import { BrowserRouter as Router } from 'react-router-dom';
-import { clearAuthTokens, getUserEmail } from './services/auth-service';
+import { clearAuthTokens, getUserEmail, isAuthenticated } from './services/auth-service';
 
 // Components
 import AuctionList from "./components/list-grp";
@@ -24,14 +25,13 @@ import { fetchSearchResults } from "./services/searchpage-service";
 
 // Protected Route Component
 interface ProtectedRouteProps {
-  isLoggedIn: boolean;
   children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ isLoggedIn, children }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
   
-  if (!isLoggedIn) {
+  if (!isAuthenticated()) {
     // Redirect to login page with the return url
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
@@ -47,8 +47,8 @@ function App() {
 
   useEffect(() => {
     // Check login status when component mounts
-    const email = getUserEmail();
-    if (email) {
+    if (isAuthenticated()) {
+      const email = getUserEmail();
       setIsLoggedIn(true);
       setUserEmail(email);
     }
@@ -62,7 +62,7 @@ function App() {
   };
 
   return (
-    <div className="bg-white min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Top Bar */}
       <div className="flex items-center w-full px-6 py-3 bg-white fixed top-0 left-0 right-0 z-[100] shadow-[0_8px_16px_-4px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] border-b border-gray-100">
         {/* Logo */}
@@ -213,37 +213,37 @@ function App() {
         <Routes>
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
-          <Route path="/bidding/:auctionID" element={<BiddingPage />} />
           
           {/* Protected Routes */}
-          <Route path="/upload-card" element={
-            <ProtectedRoute isLoggedIn={isLoggedIn}>
-              <UploadCard />
-            </ProtectedRoute>
-          } />
           <Route path="/create-auction" element={
-            <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <ProtectedRoute>
               <AuctionCreation />
             </ProtectedRoute>
           } />
-          <Route path="/my-cards" element={
-            <ProtectedRoute isLoggedIn={isLoggedIn}>
-              <MyCards />
-            </ProtectedRoute>
-          } />
           <Route path="/my-auctions" element={
-            <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <ProtectedRoute>
               <MyAuctions />
             </ProtectedRoute>
           } />
           <Route path="/update-auction/:auctionId" element={
-            <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <ProtectedRoute>
               <AuctionCreation />
+            </ProtectedRoute>
+          } />
+          <Route path="/auction/:auctionId" element={<AuctionDetails />} />
+          <Route path="/bidding/:auctionID" element={<BiddingPage />} />
+          <Route path="/upload-card" element={
+            <ProtectedRoute>
+              <UploadCard />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-cards" element={
+            <ProtectedRoute>
+              <MyCards />
             </ProtectedRoute>
           } />
           
           {/* Public Routes */}
-          <Route path="/auction/:auctionId" element={<AuctionDetails />} />
           <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUserEmail={setUserEmail} />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
