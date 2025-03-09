@@ -129,7 +129,7 @@ class CognitoService:
     #     except Exception as e:
     #         raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
-    # update user login to use only email
+    # update user login to use only email -- to update login to check if user exists in aws cognito first
     def authenticate_user(self, email: str, password: str):
         """
         Authenticate a user with Cognito using their email and password.
@@ -268,8 +268,18 @@ class CognitoService:
     def confirm_user(self, email: str, confirmation_code: str):
         """
         Confirm the user's signup with the code they received by email
+        Automatically add the user to the appropriate group based on the email domain.
         """
         try:
+            # Check if the user exists
+            try:
+                self.client.admin_get_user(
+                    UserPoolId=self.user_pool_id,
+                    Username=email
+                )
+            except self.client.exceptions.UserNotFoundException:
+                raise ServiceException(status_code=404, detail="User not found.")
+            
             # First confirm the sign-up
             self.client.confirm_sign_up(
                 ClientId=self.client_id,
@@ -278,14 +288,27 @@ class CognitoService:
                 SecretHash=self.calculate_secret_hash(email)
             )
 
-            return "User confirmed successfully."
+            # Determine the user group based on the email domain
+            if email.endswith('@mitb.smu.edu.sg'): #use guerrillamail.com for pokemail.net domain :can be changed to our sch email domain (for demo purposes)
+                group_name = 'Admins'
+            else:
+                group_name = 'Users'
+
+            # Add the user to the appropriate group
+            self.client.admin_add_user_to_group(
+                UserPoolId=self.user_pool_id,
+                Username=email,
+                GroupName=group_name
+            )
+
+            return f"User confirmed successfully and added to {group_name} group."
         
         except self.client.exceptions.CodeMismatchException:
             raise ServiceException(status_code=400, detail="Invalid confirmation code.")
         except self.client.exceptions.ExpiredCodeException:
             raise ServiceException(status_code=400, detail="Confirmation code has expired.")
-        except self.client.exceptions.UserNotFoundException:
-            raise ServiceException(status_code=404, detail="User not found.")
+        # except self.client.exceptions.UserNotFoundException:
+        #     raise ServiceException(status_code=404, detail="User not found.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Confirmation failed: {str(e)}")
 # ------------------------- End of update -----------------------------------------------------------------------------
@@ -313,33 +336,97 @@ class CognitoService:
             raise ServiceException(status_code=500, detail=f"Failed to resend confirmation code: {str(e)}")
 # ------------------------- End of update -----------------------------------------------------------------------------
 
-    #add method to list all users
-    def list_users(self):
+    # #add method to list all users
+    # def list_users(self):
+    #     """
+    #     List all users in the Cognito user pool.
+    #     """
+    #     try:
+    #         users = []
+    #         response = self.client.list_users(
+    #             UserPoolId=self.user_pool_id
+    #         )
+    #         users.extend(response['Users'])
+
+    #         # Handle pagination
+    #         while 'PaginationToken' in response:
+    #             response = self.client.list_users(
+    #                 UserPoolId=self.user_pool_id,
+    #                 PaginationToken=response['PaginationToken']
+    #             )
+    #             users.extend(response['Users'])
+
+    #         return users
+    #     except self.client.exceptions.TooManyRequestsException:
+    #         raise ServiceException(status_code=429, detail="Request limit exceeded. Try again later.")
+    #     except self.client.exceptions.NotAuthorizedException:
+    #         raise ServiceException(status_code=403, detail="Insufficient permissions.")
+    #     except Exception as e:
+    #         raise ServiceException(status_code=500, detail=f"Failed to list users: {str(e)}")
+
+# add user password reset
+    def reset_password(self, email: str):
         """
-        List all users in the Cognito user pool.
+        Reset the user's password by sending a verification code to the user's email.
+        """
+        # print(f"Email: {email}")
+        # print(f"Client ID: {self.client_id}")
+        # print(f"Secret Hash: {self.calculate_secret_hash(email)}")
+        try:
+            self.client.forgot_password(
+                ClientId=self.client_id,
+                Username=email,
+                SecretHash=self.calculate_secret_hash(email)
+            )
+            return "Password reset code sent successfully."
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User not found.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Failed to send password reset code: {str(e)}")
+        
+# confirm password reset
+    def confirm_password_reset(self, email: str, password: str, reset_confirmation_code: str):
+        """
+        Confirm the password reset with the code sent to the user's email.
+        """
+        #for error checking
+        # print(f"Email: {email}")
+        # print(f"Confirmation Code: {reset_confirmation_code}")
+        # print(f"Client ID: {self.client_id}")
+        # print(f"Secret Hash: {self.calculate_secret_hash(email)}")
+
+        try:
+            self.client.confirm_forgot_password(
+                ClientId=self.client_id,
+                Username=email,
+                ConfirmationCode=reset_confirmation_code,
+                Password=password,
+                SecretHash=self.calculate_secret_hash(email)
+            )
+            return "Password reset successful."
+        except self.client.exceptions.CodeMismatchException:
+            raise ServiceException(status_code=400, detail="Invalid confirmation code.")
+        except self.client.exceptions.ExpiredCodeException:
+            raise ServiceException(status_code=400, detail="Confirmation code has expired.")
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User not found.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Failed to reset password: {str(e)}")
+        
+# add user logout
+    def logout(self, access_token: str):
+        """
+        Logout the user by invalidating their access token.
         """
         try:
-            users = []
-            response = self.client.list_users(
-                UserPoolId=self.user_pool_id
+            self.client.global_sign_out(
+                AccessToken=access_token
             )
-            users.extend(response['Users'])
-
-            # Handle pagination
-            while 'PaginationToken' in response:
-                response = self.client.list_users(
-                    UserPoolId=self.user_pool_id,
-                    PaginationToken=response['PaginationToken']
-                )
-                users.extend(response['Users'])
-
-            return users
-        except self.client.exceptions.TooManyRequestsException:
-            raise ServiceException(status_code=429, detail="Request limit exceeded. Try again later.")
+            return "Logout successful."
         except self.client.exceptions.NotAuthorizedException:
-            raise ServiceException(status_code=403, detail="Insufficient permissions.")
+            raise ServiceException(status_code=401, detail="The access token is invalid or expired.")
         except Exception as e:
-            raise ServiceException(status_code=500, detail=f"Failed to list users: {str(e)}")
+            raise ServiceException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 
 class RoleChecker:

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import pokemonSpinner from "../assets/pokeballloading.gif";
-import { getAccessToken } from "../services/auth-service";
+import { getAuthorizationHeader } from "../services/auth-service";
 
 interface UploadResponse {
   message: string;
@@ -17,6 +17,7 @@ const UploadCard: React.FC = () => {
   const [cardName, setCardName] = useState<string>("");
   const [cardQuality, setCardQuality] = useState<string>("MINT");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [verificationResult, setVerificationResult] = useState<UploadResponse | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -36,82 +37,38 @@ const UploadCard: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!selectedFile || !cardName) {
-      setError("Please select a file and enter a card name");
-      return;
-    }
-
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    setError(null);
-    setSuccessMessage(null);
+    setError("");
+    setVerificationResult(null);
 
     const formData = new FormData();
-    formData.append('card_name', cardName);
-    formData.append('card_quality', cardQuality);
-    formData.append('image', selectedFile);
+    if (selectedFile) {
+      formData.append("file", selectedFile);
+    }
 
     try {
-      console.log('Uploading card with data:', {
-        cardName,
-        cardQuality,
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        fileType: selectedFile.type
-      });
-
-      const token = getAccessToken();
-      console.log('Using token:', token.substring(0, 20) + '...');
+      const authHeader = getAuthorizationHeader();
+      if (!authHeader) {
+        throw new Error('You must be logged in to verify cards');
+      }
 
       const response = await axios.post<UploadResponse>(
-        'http://127.0.0.1:8000/entry/card-entry/create',
+        "http://127.0.0.1:8000/verify-card",
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': authHeader,
             'Content-Type': 'multipart/form-data',
-            'Accept': 'application/json'
           },
-          timeout: 10000,
-          validateStatus: (status) => {
-            return status >= 200 && status < 300;
-          }
         }
       );
 
-      console.log('Upload response:', response.data);
-
-      if (response.data && response.data.card_id) {
-        setSuccessMessage(`Card uploaded successfully. Your Card ID is ${response.data.card_id}.`);
-        // Reset form
-        setSelectedFile(null);
-        setCardName("");
-        setPreviewUrl(null);
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (err: any) {
-      console.error('Upload error:', err);
-      if (err.response) {
-        console.error('Error response status:', err.response.status);
-        console.error('Error response headers:', err.response.headers);
-        console.error('Error response data:', err.response.data);
-        
-        if (err.response.status === 404) {
-          setError("Upload endpoint not found. Please check the server configuration.");
-        } else if (err.response.status === 401) {
-          setError("Authentication failed. Please check your login status.");
-        } else {
-          setError(err.response.data.detail || "Failed to upload card");
-        }
-      } else if (err.request) {
-        console.error('No response received. Request details:', err.request);
-        setError("No response from server. Please check if the server is running.");
-      } else {
-        console.error('Error setting up request:', err.message);
-        setError("Failed to upload card. Please try again.");
-      }
+      setVerificationResult(response.data);
+    } catch (error: any) {
+      console.error("Error verifying card:", error);
+      setError(error.response?.data?.detail || "Failed to verify card. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -221,6 +178,19 @@ const UploadCard: React.FC = () => {
             </div>
           )}
 
+          {/* Verification Result */}
+          {verificationResult && (
+            <div className="rounded-md bg-blue-50 p-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">
+                    Verification Result: {verificationResult.message}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -234,10 +204,10 @@ const UploadCard: React.FC = () => {
             {isLoading ? (
               <div className="flex items-center">
                 <img src={pokemonSpinner} alt="Loading..." className="w-5 h-5 mr-2" />
-                <span>Uploading...</span>
+                <span>Verifying...</span>
               </div>
             ) : (
-              'Upload Card'
+              'Verify Card'
             )}
           </button>
         </form>
