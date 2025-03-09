@@ -37,19 +37,6 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
         auction["EndTime"] = auction["EndTime"].timestamp()
     return {"auctions": auctions, "total_pages": int(total_pages)}
 
-<<<<<<< HEAD
-@router.get("/auction-details/{auction_id}")
-async def display_auction_details(auction_id:int, auction_service: AuctionService = Depends(get_auction_service)):
-    auction = auction_service.get_auctions_details(auction_id)
-    auction["EndTime"] = auction["EndTime"].timestamp()
-    if not auction:
-        raise HTTPException(status_code=404, detail="Auction not found")
-    return auction
-
-@router.post("/place-bid",status_code= status.HTTP_200_OK, dependencies=[Depends(req_user_role)])
-async def place_bid(bid_info: AuctionBid, auction_service: AuctionService = Depends(get_auction_service), profile_service: ProfileService = Depends(get_profile_service), auth_info: dict = Depends(req_user_role)):  # ✅ Require authentication
-    cognito_id = auth_info.get("username")
-=======
 @router.get("/auction-details/{auction_id}", response_model=dict)
 def display_auction_details(
     auction_id: int,
@@ -74,7 +61,6 @@ async def place_bid(
     auth_info: dict = Depends(get_current_user)
 ):
     cognito_id = auth_info.get("sub")
->>>>>>> 880760880a492f5f11a99f9c9597bdd2da84e4bb
     user_id = profile_service.get_profile_id(cognito_id)
     if not user_id:
         raise HTTPException(status_code=404, detail="User not found")
@@ -84,11 +70,6 @@ async def place_bid(
         if not auction:
             raise HTTPException(status_code=400, detail="Failed to place bid")
         return auction
-<<<<<<< HEAD
-    else:
-        print(auction)
-        raise HTTPException(status_code=400, detail="Failed to place bid")
-=======
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -113,7 +94,6 @@ def get_winning_auctions(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
->>>>>>> 880760880a492f5f11a99f9c9597bdd2da84e4bb
 
 @router.get("/notifications/{auction_id}")
 async def get_notifications(auction_id: int, db: Session = Depends(get_db)):

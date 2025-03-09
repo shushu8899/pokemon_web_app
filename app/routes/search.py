@@ -13,23 +13,16 @@ def search_all_tables(query: str, search_service: SearchService = Depends(get_se
     Endpoint to search across all configured tables based on the search query.
     """
     results = search_service.search_all_tables(query)
-    total_results = len(results)
+
+    total_results = sum(len(table_results) for table_results in results.values())
     
-    if not results:
+    if total_results == 0:
         raise HTTPException(status_code=404, detail="No results found")
     
-    # Group results by table for better organization
-    grouped_results = {}
-    for result in results:
-        table_name = result.get("_table", "unknown")
-        if table_name not in grouped_results:
-            grouped_results[table_name] = []
-        grouped_results[table_name].append(result)
-
     return {
         "total": total_results,
-        "tables_matched": len(grouped_results),
-        "results": grouped_results
+        "tables_matched": len(results),
+        "results": results
     }
 
 @router.get("/search/cards")

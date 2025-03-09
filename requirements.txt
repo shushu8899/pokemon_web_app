@@ -12,8 +12,5 @@ boto3==1.28.13
 python-jose==3.3.0
 langchain
 langchain_openai
-<<<<<<< HEAD
-=======
 pytest
->>>>>>> 880760880a492f5f11a99f9c9597bdd2da84e4bb
 bcrypt

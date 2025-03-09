@@ -9,29 +9,36 @@ from sqlalchemy import or_
 class SearchService:
     def __init__(self, db: Session):
         self.db = db
-        # To only allow certain columns to be searchable and returned
+        # Define searchable and returnable columns for each model
         self.searchable_models = {
-            Profile: ["Username"],
-            Card: ["CardName", "CardQuality"],
-            Auction: ["AuctionID"]
+            Profile: {
+                "searchable_columns": ["Username"],
+                "return_columns": ["Username", "Email", "NumberOfRating", "CurrentRating"]
+            },
+            Card: {
+                "searchable_columns": ["OwnerID","CardName", "CardQuality"],
+                "return_columns": ["OwnerID","CardName", "CardQuality"]
+            },
+            Auction: {
+                "searchable_columns": ["AuctionID", "SellerID"],
+                "return_columns": ["AuctionID", "SellerID", "Status"]
+            }
         }
+
     def search_all_tables(self, query):
+        if not query.strip():
+            return {}  # Prevent searching everything
+        
         search_term = f"%{query}%"
-        results = []
+        results = {}
 
         for model, columns in self.searchable_models.items():
-            # Create filter conditions for each searchable column
-            filters = [getattr(model, column_name).like(search_term) for column_name in columns]
+            filters = [getattr(model, col).like(search_term) for col in columns["searchable_columns"] if hasattr(model, col)]
 
-            # Execute query with OR conditions
-            if filters:
-                query_results = self.db.query(model).filter(or_(*filters)).all()
-
-                # Convert results to dictionaries
-                for item in query_results:
-                    item_dict = {col: getattr(item, col) for col in columns if hasattr(item, col)}
-                    item_dict['_table'] = model.__name__  # Add table name for reference
-                    results.append(item_dict)
+            query_results = self.db.query(model).filter(or_(*filters)).all()
+            
+            model_results = [{col: getattr(item, col, None) for col in columns["return_columns"]} for item in query_results]
+            results[model.__name__] = model_results
 
         return results
 
