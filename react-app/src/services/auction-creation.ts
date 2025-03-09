@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAccessToken, initializeDefaultAuth } from './auth-service';
+import { getAuthorizationHeader } from './auth-service';
 
 export interface ValidatedCard {
   CardID: number;
@@ -46,14 +46,14 @@ export interface MyAuction {
 // Get validated cards that can be put up for auction
 export const getValidatedCards = async (): Promise<ValidatedCard[]> => {
   try {
-    const token = getAccessToken();
-    if (!token) {
+    const authHeader = getAuthorizationHeader();
+    if (!authHeader) {
       throw new Error('You must be logged in to view validated cards');
     }
 
     const response = await axios.get('http://127.0.0.1:8000/auction/validated-cards', {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': authHeader
       }
     });
     console.log('API Response for validated cards:', response.data);
@@ -61,7 +61,7 @@ export const getValidatedCards = async (): Promise<ValidatedCard[]> => {
   } catch (error: any) {
     if (error.response?.status === 401) {
       console.error('Authentication error:', error.response.data);
-      throw new Error('Please use the default credentials (email: user@example.com, password: password123)');
+      throw new Error('Authentication failed. Please log in again.');
     }
     console.error('Error fetching validated cards:', error);
     throw error;
@@ -71,8 +71,8 @@ export const getValidatedCards = async (): Promise<ValidatedCard[]> => {
 // Create new auction
 export const createAuction = async (data: AuctionFormData): Promise<CreatedAuction> => {
   try {
-    const token = getAccessToken();
-    if (!token) {
+    const authHeader = getAuthorizationHeader();
+    if (!authHeader) {
       throw new Error('You must be logged in to create an auction');
     }
 
@@ -89,7 +89,7 @@ export const createAuction = async (data: AuctionFormData): Promise<CreatedAucti
 
     const response = await axios.post('http://127.0.0.1:8000/auction/submit-auction', formData, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': authHeader
       }
     });
     
@@ -98,7 +98,7 @@ export const createAuction = async (data: AuctionFormData): Promise<CreatedAucti
   } catch (error: any) {
     if (error.response?.status === 401) {
       console.error('Authentication error:', error.response.data);
-      throw new Error('Please use the default credentials (email: user@example.com, password: password123)');
+      throw new Error('Authentication failed. Please log in again.');
     }
     if (error.response?.status === 422) {
       console.error('Validation error details:', error.response.data);
@@ -106,7 +106,6 @@ export const createAuction = async (data: AuctionFormData): Promise<CreatedAucti
       if (Array.isArray(validationErrors)) {
         const errorMessages = validationErrors.map(err => {
           console.log('Validation error:', err);
-          // Remove 'body.' prefix from error location if present
           const field = err.loc[err.loc.length - 1];
           return `${field}: ${err.msg}`;
         });
@@ -125,17 +124,17 @@ export const createAuction = async (data: AuctionFormData): Promise<CreatedAucti
 // Get user's auctions
 export const getMyAuctions = async (): Promise<MyAuction[]> => {
   try {
-    const token = getAccessToken();
-    if (!token) {
+    const authHeader = getAuthorizationHeader();
+    if (!authHeader) {
       throw new Error('You must be logged in to view your auctions');
     }
 
-    console.log('Fetching user auctions with token:', token);
+    console.log('Fetching user auctions with token:', authHeader);
     console.log('Making request to:', 'http://127.0.0.1:8000/auction/my-auctions');
     
     const response = await axios.get<MyAuction[]>("http://127.0.0.1:8000/auction/my-auctions", {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/json'
       }
     });
@@ -144,8 +143,6 @@ export const getMyAuctions = async (): Promise<MyAuction[]> => {
     return response.data;
   } catch (error: any) {
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
       console.error('Server error details:', {
         status: error.response.status,
         data: error.response.data,
@@ -153,15 +150,13 @@ export const getMyAuctions = async (): Promise<MyAuction[]> => {
         error: error.message
       });
       if (error.response.status === 401) {
-        throw new Error('Please use the default credentials (email: user@example.com, password: password123)');
+        throw new Error('Authentication failed. Please log in again.');
       }
       throw new Error(`Server error: ${error.response.data.detail || error.message || 'Unknown server error'}`);
     } else if (error.request) {
-      // The request was made but no response was received
       console.error('No response received:', error.request);
       throw new Error('No response received from server');
     } else {
-      // Something happened in setting up the request that triggered an Error
       console.error('Error setting up request:', error.message);
       throw new Error(`Error: ${error.message}`);
     }
@@ -171,9 +166,10 @@ export const getMyAuctions = async (): Promise<MyAuction[]> => {
 // Delete auction
 export const deleteAuction = async (auctionId: number): Promise<boolean> => {
   try {
-    // Initialize default authentication
-    initializeDefaultAuth();
-    const token = getAccessToken();
+    const authHeader = getAuthorizationHeader();
+    if (!authHeader) {
+      throw new Error('You must be logged in to delete auctions');
+    }
     
     // First get the auction details to check if it has bids
     const auction = await getAuctionDetails(auctionId);
@@ -183,14 +179,16 @@ export const deleteAuction = async (auctionId: number): Promise<boolean> => {
 
     const response = await axios.delete(`http://127.0.0.1:8000/auction/delete-auction/${auctionId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': authHeader
       }
     });
 
     return response.status === 200;
   } catch (error: any) {
     console.error("Error deleting auction:", error);
-    if (error.response?.status === 403) {
+    if (error.response?.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    } else if (error.response?.status === 403) {
       throw new Error('You do not have permission to delete this auction');
     } else if (error.response?.status === 404) {
       throw new Error('Auction not found');
@@ -202,15 +200,15 @@ export const deleteAuction = async (auctionId: number): Promise<boolean> => {
 // Get auction details
 export const getAuctionDetails = async (auctionId: number): Promise<MyAuction> => {
   try {
-    const token = getAccessToken();
-    if (!token) {
+    const authHeader = getAuthorizationHeader();
+    if (!authHeader) {
       throw new Error('You must be logged in to view auction details');
     }
 
     console.log('Fetching auction details for ID:', auctionId);
     const response = await axios.get<MyAuction>(`http://127.0.0.1:8000/auction/auction-details/${auctionId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/json'
       }
     });
@@ -226,7 +224,7 @@ export const getAuctionDetails = async (auctionId: number): Promise<MyAuction> =
         error: error.message
       });
       if (error.response.status === 401) {
-        throw new Error('Please use the default credentials (email: user@example.com, password: password123)');
+        throw new Error('Authentication failed. Please log in again.');
       } else if (error.response.status === 403) {
         throw new Error('You do not have permission to view this auction');
       } else if (error.response.status === 404) {
@@ -246,14 +244,15 @@ export const getAuctionDetails = async (auctionId: number): Promise<MyAuction> =
 // Update auction
 export const updateAuction = async (auction: MyAuction): Promise<MyAuction> => {
   try {
+    const authHeader = getAuthorizationHeader();
+    if (!authHeader) {
+      throw new Error('You must be logged in to update auctions');
+    }
+
     // Check if there's a highest bidder
     if (auction.HighestBidderID) {
       throw new Error('You cannot update auction because it is already in progress');
     }
-
-    // Initialize default authentication
-    initializeDefaultAuth();
-    const token = getAccessToken();
     
     const formData = new FormData();
     formData.append('minimum_increment', auction.MinimumIncrement.toString());
@@ -267,7 +266,7 @@ export const updateAuction = async (auction: MyAuction): Promise<MyAuction> => {
       formData,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': authHeader,
           'Content-Type': 'multipart/form-data'
         }
       }
@@ -289,4 +288,4 @@ export const updateAuction = async (auction: MyAuction): Promise<MyAuction> => {
     }
     throw error;
   }
-}; 
+};
