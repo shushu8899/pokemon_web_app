@@ -20,6 +20,8 @@ import RegistrationPage from "./components/RegistrationPage";
 import ForgotPasswordPage from "./components/ForgotPasswordPage";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import EditCard from './components/EditCard';
+import Profile from './components/Profile';
+import CardEntry from "./components/CardEntry";
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -89,9 +91,14 @@ function App() {
             </button>
             <div className="origin-top-right absolute left-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-50" >
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                <Link to="/upload-card" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                <Link to="/card-entry" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
                   <button className="text-black font-bold">
                     Upload Card
+                  </button>
+                </Link>
+                <Link to="/verify-card" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                  <button className="text-black font-bold">
+                    Verify Card
                   </button>
                 </Link>
                 <Link to="/my-cards" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
@@ -213,19 +220,21 @@ function App() {
       <div className="flex-grow">
         <Routes>
           <Route path="/" element={<AuctionList />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
+          <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUserEmail={setUserEmail} />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* Protected Routes */}
-          <Route path="/upload-card" element={<ProtectedRoute><UploadCard /></ProtectedRoute>} />
+          <Route path="/card-entry" element={<ProtectedRoute><CardEntry /></ProtectedRoute>} />
+          <Route path="/verify-card" element={<ProtectedRoute><UploadCard /></ProtectedRoute>} />
           <Route path="/my-cards" element={<ProtectedRoute><MyCards /></ProtectedRoute>} />
           <Route path="/entry/card-entry/update" element={<ProtectedRoute><EditCard /></ProtectedRoute>} />
           <Route path="/my-auctions" element={<ProtectedRoute><MyAuctions /></ProtectedRoute>} />
           <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
           <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           
           {/* Public Routes */}
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />

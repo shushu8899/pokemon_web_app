@@ -127,6 +127,7 @@ const AuctionCreation: React.FC = () => {
       }
     } finally {
       setLoading(false);
+      
     }
   };
 
@@ -142,7 +143,7 @@ const AuctionCreation: React.FC = () => {
       padding: '2rem'
     }}>
       <div className="max-w-4xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Create New Auction</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: "Roboto" }}>Create New Auction</h1>
 
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
