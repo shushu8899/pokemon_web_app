@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile, Query, BackgroundTasks, status
+from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile, Query, BackgroundTasks, status, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 from app.services.auction_service import AuctionService
 from app.services.profile_service import ProfileService, get_current_user
@@ -11,10 +11,8 @@ from app.models.auction import AuctionInfo
 from app.models.notifications import Notification
 from typing import Dict
 from sqlalchemy.orm import Session
-import os
-import shutil
-import requests
-import boto3
+from app.dependencies.auth import req_user_role #Add this
+from app.services.utils import schedule_update_job
 from jose import jwt
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
@@ -25,6 +23,7 @@ from app.routes.auth import cognito_service
 from app.dependencies.auth import req_user_role, req_admin_role
 
 router = APIRouter()
+schedule_update_job()
 
 @router.get("/auction-collection")
 async def display_auction_page(page: int = Query(1, description="Page number"),  auction_service: AuctionService = Depends(get_auction_service)):
@@ -32,31 +31,37 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
     total_pages =  auction_service.get_total_page()
     print(auctions)
     print(total_pages)
-    return {"auctions": auctions, "total_pages": total_pages}
+    for auction in auctions:
+        auction["EndTime"] = auction["EndTime"].timestamp()
+    return {"auctions": auctions, "total_pages": int(total_pages)}
 
 @router.get("/auction-details/{auction_id}", response_model=dict)
 def display_auction_details(
     auction_id: int,
-    service: AuctionService = Depends(get_auction_service),
+    auction_service: AuctionService = Depends(get_auction_service),
     db: Session = Depends(get_db)
 ):
     try:
-        auction_details = service.get_auctions_details(auction_id)
-        return auction_details
-    except HTTPException as e:
+        auction_details = auction_service.get_auctions_details(auction_id)
+        
+        if not auction_details:
+            raise HTTPException(status_code=404, detail="Auction not found")
+        
+        auction_details["EndTime"] = auction_details["EndTime"].timestamp()
+        
+    except HTTPException as e: 
         raise e
-    except Exception as e:
+    except Exception as e: 
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/place-bid/{auction_id}", response_model=AuctionResponse, dependencies=[Depends(req_user_role)])
-async def place_bid(
-    auction_id: int,
-    bid_amount: float = Form(...),
+
+@router.post("/place-bid/{auction_id}",response_model=AuctionResponse,dependencies=[Depends(req_user_role)])
+async def place_bid(auction_id: int,
+    bid_amount: float = Body(...),
     auction_service: AuctionService = Depends(get_auction_service),
     profile_service: ProfileService = Depends(get_profile_service),
-    db: Session = Depends(get_db),
     auth_info: dict = Depends(get_current_user)
-):
+):  # ✅ Require authentication
     cognito_id = auth_info.get("sub")
     user_id = profile_service.get_profile_id(cognito_id)
     if not user_id:

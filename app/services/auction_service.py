@@ -35,6 +35,7 @@ class AuctionService:
                 Auction.AuctionID,
                 Auction.CardID,
                 Auction.Status,
+                Auction.EndTime,
                 Auction.HighestBid,
                 Auction.EndTime,
                 Card.IsValidated,
@@ -43,54 +44,48 @@ class AuctionService:
                 Card.ImageURL,  # Include ImageURL from Card
             )
             .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired
+            # .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired to add back
             .order_by(Auction.EndTime)  # Sort by earliest expiration
             .offset(offset)
             .limit(page_size)
             .all()
         )
+        return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
-        # Update the status of each auction based on the current datetime
-        current_time = datetime.now()
-        for row in query_result:
-            auction = self.db.query(Auction).filter(Auction.AuctionID == row.AuctionID).first()
-            if current_time > auction.EndTime:
+
+    def update_auction_status(self):
+        current_time = datetime.utcnow()
+        auctions = self.db.query(Auction).all()
+        for auction in auctions:
+            if auction.EndTime > current_time:
+                auction.Status = "In Progress"
+            elif auction.EndTime <= current_time and auction.HighestBid > 0:
                 auction.Status = "Closed"
             else:
-                auction.Status = "In Progress"
-            self.db.commit()
-            self.db.refresh(auction)
+                auction.Status = "Expired"
 
-        # Filter out auctions with status "Closed"
-        filtered_result = [row for row in query_result if row.Status != "Closed"]
-
-        # Sort the results by EndTime
-        sorted_result = sorted(filtered_result, key=lambda x: x.EndTime)
-
-        return [
-            dict(
-                zip(
-                    [
-                        "AuctionID",
-                        "CardID",
-                        "HighestBid",
-                        "EndTime",
-                        "IsValidated",
-                        "CardName",
-                        "CardQuality",
-                        "ImageURL",
-                    ],
-                    row,
-                )
-            )
-            for row in sorted_result
-        ]
+        self.db.commit()
 
     def get_auctions_details(self, auction_id: int):
         """
         Get auction details by auction ID
         """
-        auction = self.db.query(Auction).filter(Auction.AuctionID == auction_id).first()
+        auction = ( 
+            self.db.query(            
+            Auction.AuctionID,
+            Auction.CardID,
+            Auction.Status,
+            Auction.EndTime,
+            Auction.HighestBid,
+            Card.IsValidated,
+            Card.CardName,
+            Card.CardQuality,
+            Auction.ImageURL  # Ensure this is the correct field in `Card)
+            )
+            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
+            .filter(Auction.AuctionID == auction_id) 
+            .first()
+        )
         if not auction:
             raise HTTPException(status_code=404, detail="Auction not found")
 
@@ -125,12 +120,14 @@ class AuctionService:
         return auction_details
 
     def get_total_page(self):
-        """
-        Get total page of auctions
-        """
-        current_date = datetime.today().date() # assume endtime is a date
-        available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()
-        return len(available_auction) // 10 + 1
+            """
+            Get total page of auctions
+            """
+            current_date = datetime.utcnow().isoformat()  # ✅ Returns "YYYY-MM-DDTHH:MM:SS.ssssss"
+            print(current_date)
+            available_auction = self.db.query(Auction).all()
+            # available_auction = self.db.query(Auction).filter(Auction.EndTime>=current_date).all()  # to add back
+            return len(available_auction) // 10 + 1
     
     def get_auction_by_id(self, auction_id: int):
         """
@@ -279,49 +276,39 @@ class AuctionService:
         auction = self.get_auction_by_id(bid_info.AuctionID)
         if not auction:
             raise HTTPException(status_code=404, detail="Auction not found")
-
-        # Refresh the status of the auction based on the current time
-        current_time = datetime.now()
-        if current_time > auction.EndTime:
-            auction.Status = "Closed"
-        else:
-            auction.Status = "In Progress"
-        self.db.commit()
-        self.db.refresh(auction)
-
-        # Check if the auction is closed
+        #Check if user id is the seller
+        if auction.SellerID == user_id:
+            raise HTTPException(status_code=403, detail="Seller cannot bid on their own auction")
+        
         if auction.Status == "Closed":
             raise HTTPException(status_code=400, detail="Cannot bid on a closed auction")
 
-        # Check if user_id is the seller
-        if auction.SellerID == user_id:
-            raise HTTPException(status_code=403, detail="Seller cannot bid on their own auction")
-
-        # Check if the bid amount is greater than the highest bid plus the minimum increment
-        if bid_info.BidAmount <= auction.HighestBid + auction.MinimumIncrement:
-            raise HTTPException(status_code=400, detail="Bid amount must be greater than the highest bid plus the minimum increment")
-
-        # Save the previous highest bidder ID before updating the auction
-        previous_highest_bidder = auction.HighestBidderID
-        previous_highest_bid = auction.HighestBid
-
-        # Update the auction with the new highest bid and highest bidder ID
-        auction.HighestBid = bid_info.BidAmount
-        auction.HighestBidderID = user_id
-        self.db.commit()
-        self.db.refresh(auction)
-
-        # If the previous highest bidder exists, create a notification
-        if previous_highest_bidder:
-            message = f"You have been outbid! New highest bid: ${bid_info.BidAmount}"
-            notification = Notification(
-                BidderID=previous_highest_bidder,
-                AuctionID=auction.AuctionID,
-                Message=message,
-                TimeSent=datetime.now()
-            )
-            self.db.add(notification)
+        if auction.HighestBid + auction.MinimumIncrement > bid_info.BidAmount:
+            print(f"user bid {bid_info.BidAmount} not high enough, cur bid : {auction.HighestBid + auction.MinimumIncrement}")
+            return None  # Current bid not high enough
+        else:
+            #Save the previous highest bidder ID before updating the auction
+            previous_highest_bidder = auction.HighestBidderID
+            previous_highest_bid = auction.HighestBid
+            for key, value in bid_info.model_dump().items():
+                setattr(auction, key, value)
+          # Update bid fields explicitly
+            auction.HighestBid = bid_info.BidAmount
+            auction.HighestBidderID = user_id
             self.db.commit()
+            self.db.refresh(auction)
+
+            # If the previous highest bidder exists, create a notification
+            if previous_highest_bidder:
+                message = f"You have been outbid! New highest bid: ${bid_info.BidAmount}" #changed to bid amount
+                notification = Notification(
+                    BidderID=previous_highest_bidder,  # Use BidderID (from Notification model)
+                    AuctionID=auction.AuctionID,  # Use AuctionID (from Notification model)
+                    Message=message,
+                    TimeSent=datetime.now()  # Set the current timestamp
+                )
+                self.db.add(notification)
+                self.db.commit()
 
         return auction
 
