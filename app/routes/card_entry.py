@@ -1,0 +1,175 @@
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Query
+import os
+import shutil
+import uuid
+from sqlalchemy.orm import Session
+from app.models.card import Card
+from app.models.profile import Profile
+from app.db.db import get_db
+from app.dependencies.auth import req_user_or_admin
+from app.services.profile_service import get_current_user
+from typing import List
+
+router = APIRouter()
+
+UPLOAD_DIR = "static/uploads/"
+os.makedirs(UPLOAD_DIR, exist_ok=True)  # Ensure upload directory exists
+
+@router.post("/card-entry/create", dependencies=[Depends(req_user_or_admin)])
+async def create_card_entry(
+    card_name: str = Form(...),
+    card_quality: str = Form(...),
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    Users (admins and regular users) can create a Pokémon card entry with details.
+    """
+    cognito_user_id = auth_info.get("sub")
+
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    owner_id = user_profile.UserID
+
+    # Check if card already exists for this user
+    existing_card = db.query(Card).filter(Card.CardName.ilike(card_name), Card.OwnerID == owner_id).first()
+    if existing_card:
+        raise HTTPException(status_code=400, detail="Card already exists for this user")
+
+    # Generate a unique filename for the image
+    unique_filename = f"{uuid.uuid4()}_{image.filename}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    # Save Image to Upload Directory
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+
+    image_url = f"/static/uploads/{unique_filename}"
+
+    # Create a new card entry
+    new_card = Card(
+        OwnerID=owner_id,
+        CardName=card_name,
+        CardQuality=card_quality,
+        IsValidated=False,
+        ImageURL=image_url
+    )
+
+    db.add(new_card)
+    db.commit()
+    db.refresh(new_card)
+
+    return {
+        "message": "Card entry successful",
+        "card_id": new_card.CardID,
+        "image_url": image_url
+    }
+
+@router.put("/card-entry/update", dependencies=[Depends(req_user_or_admin)])
+async def update_card_entry(
+    card_id: int = Form(...),
+    card_name: str = Form(...),
+    card_quality: str = Form(...),
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    Users (admins and regular users) can update a Pokémon card entry with details.
+    """
+    cognito_user_id = auth_info.get("sub")
+
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    owner_id = user_profile.UserID
+
+    # Retrieve the existing card
+    existing_card = db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == owner_id).first()
+    if not existing_card:
+        raise HTTPException(status_code=404, detail="Card not found for this user")
+
+    # Generate a unique filename for the image
+    unique_filename = f"{uuid.uuid4()}_{image.filename}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    # Save Image to Upload Directory
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+
+    image_url = f"/static/uploads/{unique_filename}"
+
+    # Update the existing card
+    existing_card.CardName = card_name
+    existing_card.CardQuality = card_quality
+    existing_card.ImageURL = image_url
+    db.commit()
+    db.refresh(existing_card)
+
+    return {
+        "message": "Card updated successfully",
+        "card_id": existing_card.CardID,
+        "updated_image_url": image_url
+    }
+
+@router.get("/my-cards", dependencies=[Depends(req_user_or_admin)])
+async def get_my_cards(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=10, ge=1, le=100, description="Number of cards per page"),
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    Get all cards owned by the currently logged-in user with pagination support.
+    
+    Parameters:
+    - page: The page number (starts from 1)
+    - limit: Number of cards per page (default: 10, max: 100)
+    """
+    cognito_user_id = auth_info.get("sub")
+
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    owner_id = user_profile.UserID
+
+    # Calculate offset
+    offset = (page - 1) * limit
+
+    # Get total count of user's cards
+    total_cards = db.query(Card).filter(Card.OwnerID == owner_id).count()
+
+    # Get paginated cards
+    user_cards = db.query(Card).filter(Card.OwnerID == owner_id).offset(offset).limit(limit).all()
+
+    # Calculate total pages
+    total_pages = (total_cards + limit - 1) // limit
+
+    # Format the response
+    return {
+        "cards": [
+            {
+                "card_id": card.CardID,
+                "card_name": card.CardName,
+                "card_quality": card.CardQuality,
+                "is_validated": card.IsValidated,
+                "image_url": card.ImageURL
+            }
+            for card in user_cards
+        ],
+        "pagination": {
+            "current_page": page,
+            "total_pages": total_pages,
+            "total_cards": total_cards,
+            "has_next": page < total_pages,
+            "has_previous": page > 1
+        }
+    }

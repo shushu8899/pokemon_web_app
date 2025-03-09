@@ -1,22 +1,29 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
-import axios from "axios";
-import Logo from "./assets/logo.svg.png"; // Ensure the file exists in src/assets
-import bannerImage from "./assets/Pokemon Card Banner.png"; // Ensure the file exists in src/assets
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import Logo from "./assets/logo.svg.png";
+import bannerImage from "./assets/Pokemon Card Banner.png";
+import { BrowserRouter as Router } from 'react-router-dom';
 
 // Components
 import AuctionList from "./components/list-grp";
 import BiddingPage from "./components/auction-details";
 import SearchPage from "./components/SearchPage";
-import VerifyCard from "./components/verify-card";
+import UploadCard from "./components/verify-card";
 import AuctionCreation from "./components/AuctionCreation";
+import MyCards from "./components/MyCards";
+import MyAuctions from "./components/MyAuctions";
+import AuctionDetails from './components/AuctionDetails';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
+import { initializeDefaultAuth } from "./services/auth-service";
 
 function App() {
   const location = useLocation();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Initialize default authentication on app start
+  useEffect(() => {
+    initializeDefaultAuth();
+  }, []);
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
@@ -45,9 +52,9 @@ function App() {
             </button>
             <div className="origin-top-right absolute left-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden group-hover:block z-50" >
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                <Link to="/verify-card" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
+                <Link to="/upload-card" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
                   <button className="text-black font-bold">
-                    Verify Card
+                    Upload Card
                   </button>
                 </Link>
                 <Link to="/my-cards" className="block px-4 py-2 text-gray-700 hover:bg-yellow-500" role="menuitem">
@@ -80,11 +87,6 @@ function App() {
               </div>
             </div>
           </div>
-          <Link to="/login">
-            <button className="w-40 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px", fontFamily: "Roboto" }}>
-              Account
-            </button>
-          </Link>
           <Link to="/search">
             <button className="w-10 py-2 text-black font-bold hover:bg-yellow-500" style={{ borderRadius: "100px" }}>
               {"\u2315"}
@@ -127,8 +129,15 @@ function App() {
           <Route path="/" element={<AuctionList />} />
           <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
           <Route path="/bidding/:auctionID" element={<BiddingPage />} />
-          <Route path="/verify-card" element={<VerifyCard />} />
+          <Route path="/upload-card" element={<UploadCard />} />
           <Route path="/create-auction" element={<AuctionCreation />} />
+          <Route path="/my-cards" element={<MyCards />} />
+          <Route path="/my-auctions" element={<MyAuctions />} />
+          <Route path="/auction/:auctionId" element={<AuctionDetails />} />
+          <Route path="/update-auction/:auctionId" element={<AuctionCreation />} />
+          
+          {/* Catch-all redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </div>

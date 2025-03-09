@@ -249,7 +249,7 @@ class AuctionService:
         # Update the auction record
         auction.MinimumIncrement = minimum_increment
         auction.EndTime = end_time
-        auction.StartingBid = starting_bid
+        auction.HighestBid = starting_bid  # Update HighestBid to match starting_bid
 
         # Compare current datetime vs end time of the auction
         current_time = datetime.now()
