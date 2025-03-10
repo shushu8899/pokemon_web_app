@@ -21,7 +21,7 @@ function ResetPasswordPage() {
     try {
       const response = await axios.post(`http://localhost:8000/confirm-password-reset?email=${encodeURIComponent(email)}&new_password=${encodeURIComponent(newPassword)}&reset_confirmation_code=${encodeURIComponent(resetCode)}`);
       console.log('Password reset successful:', response.data);
-      setSuccess('Password reset successful. You can now log in with your new password.');
+      setSuccess('Password reset successful. Please log in with your new password.');
       setError('');
       // Delay the redirection to the login page
       setTimeout(() => {
@@ -31,6 +31,10 @@ function ResetPasswordPage() {
       console.error('Password reset failed:', error.response.data);
       setError('Password reset failed. Please check your details and try again.');
       setSuccess('');
+      // Clear the error message after 2 seconds
+      setTimeout(() => {
+        setError('');
+      }, 2000); // 2 seconds delay
     }
   };
 
