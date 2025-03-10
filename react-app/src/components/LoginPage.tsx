@@ -28,6 +28,7 @@ function Login({ setIsLoggedIn, setUserEmail }: LoginProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(''); // Clear the error message when the user clicks the login button
     try {
       const response = await axios.post<LoginResponse>(`http://localhost:8000/login?email=${email}&password=${password}`);
       console.log('Login successful:', response.data);
@@ -52,7 +53,7 @@ function Login({ setIsLoggedIn, setUserEmail }: LoginProps) {
   return (
     <div className={styles.loginPage}>
       <div className={styles.loginContainer}>
-        <h2>Login</h2>
+        <h2 className={styles.boldText}>Login</h2>
         <form onSubmit={handleSubmit}>
           <div>
             <label>Email:</label>
