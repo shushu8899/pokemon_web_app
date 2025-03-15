@@ -89,7 +89,7 @@ function Register() {
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="password">Password:</label>
-            <div className="relative">
+            <div className="relative isolate">
               <input
                 type="password"
                 id="password"
@@ -98,9 +98,9 @@ function Register() {
                 required
                 className={styles.input}
               />
-              <div className="absolute left-full -top-5 ml-12 w-72">
-                <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
-                
+              <div className="absolute left-full -top-5 ml-12 w-72" style={{ zIndex: 1000 }}>
+                <div className="bg-gray-50 p-4 rounded-lg shadow-lg border border-gray-200">
+                  
                   <p className="text-gray-700 text-sm font-medium mb-2 pl-1">Your password needs to:</p>
                   <div style={{ lineHeight: '1' }}>
                     <div className={validations.minLength ? 'text-green-500' : 'text-red-500'}>
