@@ -2,38 +2,26 @@ import { Routes, Route, Link, useLocation, useNavigate, Navigate } from "react-r
 import { useState, useEffect } from "react";
 import Logo from "../assets/logo.svg.png"; // Ensure you have the correct path to the logo
 import { navigation, NAV_LINKS, PUBLIC_ROUTES, PROTECTED_ROUTES } from "../constants";
-import { clearAuthTokens, getUserEmail, isAuthenticated } from '../services/auth-service';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Check login status when component mounts
-    if (isAuthenticated()) {
-      const email = getUserEmail();
-      setIsLoggedIn(true);
-      setUserEmail(email);
-    }
-  }, []);
+  const { isAuthenticated, user, logout } = useAuth();
 
   const handleLogout = () => {
-    clearAuthTokens();
-    setIsLoggedIn(false);
-    setUserEmail(null);
+    logout();
     navigate('/');
   };
 
   return (
-    <div className="fixed z-50 w-full">
-      <div className="flex items-center px-5 lg:px-7.5 xl:px-10 max-lg:px-4 h-18 shadow-lg">
+    <div className="fixed z-50 w-full bg-white">
+      <div className="flex items-center px-5 lg:px-7.5 xl:px-10 max-lg:px-4 h-18 shadow-lg bg-white">
         <Link to="/" className="block w-[12rem]">
           <img src={Logo} alt="Pokemonlogo" width={150} height={100} />
         </Link>
 
         {/* Main Navigation */}
-        <nav className="relative z-2 space-x-30 flex items-center justify-center ml-auto lg:bg-transparent h-full">
+        <nav className="relative z-2 space-x-30 flex items-center justify-center ml-auto bg-white h-full">
           {/* Main Links */}
           {NAV_LINKS.MAIN.map((item) => (
             <Link key={item.path} to={item.path}>
@@ -84,9 +72,9 @@ const Header = () => {
           </div>
         </nav>
 
-          <div className="ml-auto flex items-center space-x-4">
+        <div className="ml-auto flex items-center space-x-4">
           {/* Auth/Account Section */}
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <div className="relative inline-block text-left group">
               <button className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" 
                 style={{ fontFamily: "Roboto" }}>
@@ -95,7 +83,7 @@ const Header = () => {
               <div className="absolute left-1/2 -translate-x-1/2 w-48 rounded-md shadow-lg bg-white opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 mt-5">
                 <div className="py-1" role="menu">
                   <div className="block px-4 py-2 text-sm text-gray-500 border-b border-gray-200 truncate">
-                    {userEmail}
+                    {user?.email}
                   </div>
                   <Link to={PROTECTED_ROUTES.PROFILE} className="block px-4 py-2">
                     <button className="text-black font-bold w-full text-left transition-colors hover:text-[#0908ba]">
