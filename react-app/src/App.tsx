@@ -24,6 +24,7 @@ import EditCard from './components/EditCard';
 import Profile from './components/Profile';
 import CardEntry from "./components/CardEntry";
 import UnvalidatedCards from './components/UnvalidatedCards';
+import ConfirmRegistrationPage from './components/ConfirmRegistrationPage';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -89,6 +90,7 @@ function App() {
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/confirm-registration" element={<ConfirmRegistrationPage />} />
           
           {/* Protected Routes */}
           <Route path="/card-entry" element={<ProtectedRoute><CardEntry /></ProtectedRoute>} />
