@@ -21,7 +21,7 @@ jobs:
           name: Run tests
           command: |
             . venv/bin/activate
-            pytest . | tee test-results.log
+            pytest --cov=app --cov-branch --cov-report=html 2>&1 | tee test-results.log
       - store_artifacts:
           path: test-results.log
 

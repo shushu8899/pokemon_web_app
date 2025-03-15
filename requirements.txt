@@ -14,3 +14,4 @@ langchain
 langchain_openai
 pytest
 bcrypt
+pytest-cov

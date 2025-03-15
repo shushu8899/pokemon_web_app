@@ -64,7 +64,50 @@ def test_get_profile(profile_service, mock_db):
 
     mock_db.query.assert_called_once_with(Profile)
     mock_db.query.return_value.all.assert_called_once()
-    
+
+def test_get_profile_id_not_found(profile_service, mock_db):
+    # 1) Arrange
+    mock_db.query().filter().first.return_value = None
+
+    # 2) Act 
+    result = profile_service.get_profile_id("invalid_username")
+
+    # 3) Assert
+    assert result is None
+    mock_db.query().filter().first.assert_called_once()
+
+def test_get_profile_id_success(profile_service, mock_db):
+    # 1) Arrange
+    profile_mock = Mock(spec=Profile)
+    profile_mock.UserID = 1
+
+    # 2) Act 
+    mock_db.query().filter().first.return_value = profile_mock
+    result = profile_service.get_profile_id("valid_username")
+
+    # 3) Assert
+    assert result == 1
+    mock_db.query().filter().first.assert_called_once()
+
+def test_add_profile_email_already_exists(profile_service, mock_db):
+    # Mock profile info
+    profile_data = Mock(spec=ProfileInfo)
+    profile_data.Username = "TestUsername1"
+    profile_data.Email = "username1@gmail.com"
+
+    # Simulate email already exists in the database
+    mock_db.query().filter().first.side_effect = [None, Mock(spec=Profile)]
+
+    # Call the function and assert ServiceException is raised
+    with pytest.raises(ServiceException) as excinfo:
+        profile_service.add_profile(profile_data)
+
+    # Asserts
+    assert excinfo.value.status_code == 409
+    assert str(excinfo.value.detail) == "Email already exists"
+    assert mock_db.query().filter().first.call_count == 2  # Check that two queries were made
+
+
 
 def test_create_duplicate_username(profile_service, mock_db):
     """
