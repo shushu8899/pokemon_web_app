@@ -4,16 +4,18 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import styles from './ForgotPasswordPage.module.css'; // Import the CSS module
+import styles from './LoginPage.module.css'; // Using the same styles as login page
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await axios.post(`http://localhost:8000/reset-password?email=${encodeURIComponent(email)}`);
       console.log('Reset confirmation code sent:', response.data);
@@ -25,27 +27,45 @@ function ForgotPasswordPage() {
       console.error('Failed to send reset confirmation code:', error.response.data);
       setError('Failed to send reset confirmation code. Please check your email and try again.');
       setSuccess('');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className={styles.forgotPasswordPage}>
-      <div className={styles.forgotPasswordContainer}>
+    <div className={styles.loginPage}>
+      <div className={styles.loginContainer}>
         <h2>Forgot Password</h2>
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label>Email:</label>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {success && <div className="text-green-500 mb-4">{success}</div>}
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label htmlFor="email">Email:</label>
             <input
               type="email"
+              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className={styles.input}
             />
           </div>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          {success && <p style={{ color: 'green' }}>{success}</p>}
-          <button type="submit">Send Reset Confirmation Code</button>
+          <div className={styles.formGroup}>
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className={styles.button}
+            >
+              {isLoading ? 'Sending...' : 'Send Reset Confirmation Code'}
+            </button>
+          </div>
         </form>
+        <p className={styles.link}>
+          Remember your password?{' '}
+          <a href="/login" className="text-blue-500 hover:text-blue-700">
+            Back to login
+          </a>
+        </p>
       </div>
     </div>
   );
