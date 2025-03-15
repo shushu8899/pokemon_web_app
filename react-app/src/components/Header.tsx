@@ -27,13 +27,13 @@ const Header = () => {
 
   return (
     <div className="fixed z-50 w-full">
-      <div className="flex items-center px-5 lg:px-7.5 xl:px-10 max-lg:px-4 h-18 shadow-lg">
+      <div className="flex items-center px-5 lg:px-7.5 xl:px-10 max-lg:px-4 h-18 shadow-lg bg-white">
         <Link to="/" className="block w-[12rem]">
           <img src={Logo} alt="Pokemonlogo" width={150} height={100} />
         </Link>
 
         {/* Main Navigation */}
-        <nav className="relative z-2 space-x-30 flex items-center justify-center ml-auto lg:bg-transparent h-full">
+        <nav className="relative z-2 space-x-30 flex items-center justify-center ml-auto lg:bg-white h-full">
           {/* Main Links */}
           {NAV_LINKS.MAIN.map((item) => (
             <Link key={item.path} to={item.path}>
