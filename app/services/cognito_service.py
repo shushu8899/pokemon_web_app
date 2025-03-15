@@ -163,6 +163,8 @@ class CognitoService:
             raise ServiceException(status_code=401, detail="Invalid email or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
         except self.client.exceptions.UserNotConfirmedException:
             raise ServiceException(status_code=403, detail="User account not confirmed.")
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User account doesnt exist.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
@@ -235,6 +237,8 @@ class CognitoService:
 
         except self.client.exceptions.UsernameExistsException:
             raise ServiceException(status_code=400, detail="User already exists.")
+        except self.client.exceptions.InvalidPasswordException:
+            raise ServiceException(status_code=400, detail="Password does not meet the requirements. The password must be at least 8 characters and include a number, uppercase and a special character.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Registration failed: {str(e)}")
  
@@ -304,7 +308,7 @@ class CognitoService:
             return f"User confirmed successfully and added to {group_name} group."
         
         except self.client.exceptions.CodeMismatchException:
-            raise ServiceException(status_code=400, detail="Invalid confirmation code.")
+            raise ServiceException(status_code=400, detail="Invalid confirmation code. Please check your email and re-enter the code.")
         except self.client.exceptions.ExpiredCodeException:
             raise ServiceException(status_code=400, detail="Confirmation code has expired.")
         # except self.client.exceptions.UserNotFoundException:

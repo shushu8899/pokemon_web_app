@@ -136,7 +136,7 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Auctions Section */}
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                 <h2 className="text-2xl font-bold mb-6 text-center">My Auctions</h2>
                 
                 {auctions.length === 0 ? (
@@ -144,7 +144,7 @@ const Profile: React.FC = () => {
                         You haven't created any auctions yet.
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {auctions.map((auction) => (
                             <div key={auction.AuctionID} className="bg-white rounded-lg shadow-lg p-4 relative">
                                 {/* Status Badge */}
@@ -155,21 +155,21 @@ const Profile: React.FC = () => {
                                 </div>
 
                                 {/* Card Image */}
-                                <div className="aspect-w-3 aspect-h-4 mb-4 mt-10">
+                                <div className="aspect-w-3 aspect-h-4 mb-4 mt-6">
                                     {auction.ImageURL && (
                                         <img
                                             src={auction.ImageURL.startsWith('http') 
                                                 ? auction.ImageURL 
                                                 : `http://127.0.0.1:8000${auction.ImageURL}`}
                                             alt={auction.CardName}
-                                            className="w-full h-64 object-contain rounded-lg"
+                                            className="w-full h-48 object-contain rounded-lg"
                                         />
                                     )}
                                 </div>
 
                                 {/* Auction Details */}
                                 <div className="mt-4 text-center">
-                                    <h3 className="text-lg font-semibold mb-2">{auction.CardName}</h3>
+                                    <h3 className="text-lg font-semibold mb-2 truncate">{auction.CardName}</h3>
                                     {auction.HighestBidderID ? (
                                         <p className="text-gray-600">Current Bid: ${auction.HighestBid}</p>
                                     ) : (

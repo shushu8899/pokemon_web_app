@@ -96,3 +96,7 @@
   color: #495057;
   text-decoration: underline;
 }
+
+.boldText {
+  font-weight: bold;
+}
