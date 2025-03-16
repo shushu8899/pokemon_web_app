@@ -32,14 +32,6 @@ jobs:
     steps:
       - checkout  # Pull down your code
 
-      - setup_remote_docker
-
-      - run:
-          name: Install Docker
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y docker.io
-
       - run:
           name: Build Docker Image
           command: |
