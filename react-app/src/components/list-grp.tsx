@@ -77,9 +77,6 @@ const AuctionList: React.FC = () => {
       {/* Auction List Section */}
       <div className="container mx-auto px-4 py-8">
         <div style={{ textAlign: "center"}}>
-          <h1 
-            className="font-roboto justify-center p-8 mt-8 mx-8"
-          >Explore Active Listings</h1>
           <div style={{ padding: "20px", textAlign: "center", minHeight: "100vh" }}>
             {/* Floating Pokémon that moves & displays message */}
             <FloatingPokemon />
