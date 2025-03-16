@@ -34,19 +34,6 @@ jobs:
       - setup_remote_docker
 
       - run:
-          name: Install Docker Credential Helper
-          command: |
-            # Install the Docker credential helper
-            curl -fsSL https://github.com/docker/docker-credential-helpers/releases/download/v0.9.3/docker-credential-pass-linux-amd64-0.9.3.tar.gz | tar xz
-            mv docker-credential-pass /usr/local/bin/
-      - run:
-          name: Configure Docker to use Credential Helper
-          command: |
-            # Configure Docker to use credential helper
-            mkdir -p ~/.docker
-            echo '{"credsStore": "default"}' > ~/.docker/config.json
-
-      - run:
           name: Build Docker Image
           command: |
             docker build -t kierenchua2023/modern-software-solutions:latest .
