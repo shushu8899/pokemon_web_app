@@ -32,7 +32,7 @@ jobs:
     steps:
       - checkout  # Pull down your code
 
-      - setup_remote_docker:
+      - setup_remote_docker
 
       - run:
           name: Install Docker
