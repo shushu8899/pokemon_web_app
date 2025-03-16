@@ -37,7 +37,7 @@ jobs:
           name: Install Docker Credential Helper
           command: |
             # Install the Docker credential helper
-            curl -fsSL https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-pass-linux-amd64-0.6.3.tar.gz | tar xz
+            curl -fsSL https://github.com/docker/docker-credential-helpers/releases/download/v0.9.3/docker-credential-pass-linux-amd64-0.9.3.tar.gz | tar xz
             mv docker-credential-pass /usr/local/bin/
       - run:
           name: Configure Docker to use Credential Helper
