@@ -7,6 +7,7 @@ Card DB Services, run database queries for specific manipulations
 from sqlalchemy.orm import Session
 from app.models.card import Card, CardInfo
 from app.models.profile import Profile
+from app.exceptions import ServiceException
 
 
 class CardService:
@@ -32,26 +33,33 @@ class CardService:
         # Check if the user_id exist
         profile = self.db.query(Profile).filter(Profile.Username == username).first()
         if not profile:
-            return None
+            raise ServiceException(404, "User not found")
         user_id = profile.UserID
-        new_card = Card(OwnerID=user_id, **card_data.model_dump())
+
+        card_data_dict = card_data.model_dump()
+        card_data_dict["OwnerID"] = user_id
+
+        new_card = Card(**card_data_dict)
         self.db.add(new_card)
         self.db.commit()
         self.db.refresh(new_card)
         return new_card
 
-    def delete_card(self, card_id: int, username: int):
+    def delete_card(self, card_id: int, username: str):
         """
         Delete card for specific User
         """
         # Check if the card exists
         profile = self.db.query(Profile).filter(Profile.Username == username).first()
         if not profile:
-            # TODO Return a forbidden permissons error here
-            return None
-        card = self.db.query(Card).filter(
-            Card.CardID == card_id, Card.OwnerID == profile.UserID
-        )
+            return False
+        card = self.db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == profile.UserID).first()
+        if not card:
+            exists_card = self.db.query(Card).filter(Card.CardID == card_id).first()
+            if not exists_card:
+                raise ServiceException(404, "Card not found")
+            raise ServiceException(403, "Forbidden to delete card")
+        
         self.db.delete(card)
         self.db.commit()
         return True
