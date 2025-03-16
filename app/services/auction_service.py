@@ -18,11 +18,12 @@ import uuid
 import logging
 from typing import Union
 from app.exceptions import ServiceException
-
+from app.services.websocket_manager import WebSocketManager
 
 class AuctionService:
     def __init__(self, db: Session):
         self.db = db
+        self.websocket_manager = WebSocketManager(db=self.db)
 
     def get_auctions_by_page(self, page: int, page_size: int = 10):
         """
@@ -301,6 +302,8 @@ class AuctionService:
         else:
             #Save the previous highest bidder ID before updating the auction
             previous_highest_bidder = auction.HighestBidderID
+            previous_bidder_profile = self.db.query(Profile).filter(Profile.UserID == previous_highest_bidder).first()
+            previous_bidder_email = previous_bidder_profile.Email
             previous_highest_bid = auction.HighestBid
             for key, value in bid_info.model_dump().items():
                 setattr(auction, key, value)
@@ -314,13 +317,16 @@ class AuctionService:
             if previous_highest_bidder:
                 message = f"You have been outbid! New highest bid: ${bid_info.BidAmount}" #changed to bid amount
                 notification = Notification(
-                    BidderID=previous_highest_bidder,  # Use BidderID (from Notification model)
+                    ReceiverID=previous_highest_bidder,  # Use BidderID (from Notification model)
                     AuctionID=auction.AuctionID,  # Use AuctionID (from Notification model)
                     Message=message,
                     TimeSent=datetime.now()  # Set the current timestamp
                 )
                 self.db.add(notification)
                 self.db.commit()
+
+                # Send WebSocket notification to the previous highest bidder
+                self.websocket_manager.send_notification(previous_bidder_email, message)
 
         return auction
 
@@ -351,42 +357,42 @@ class AuctionService:
 
         return auction_list
 
-    def end_expired_auctions(self):
-        """Automatically ends auctions that have expired."""
-        now = datetime.now()  # Use timezone-aware datetime
-        expired_auctions = self.db.query(Auction).filter(
-            Auction.Status == "In Progress",
-            Auction.EndTime <= now
-        ).all()
+    # def end_expired_auctions(self):
+    #     """Automatically ends auctions that have expired."""
+    #     now = datetime.now()  # Use timezone-aware datetime
+    #     expired_auctions = self.db.query(Auction).filter(
+    #         Auction.Status == "In Progress",
+    #         Auction.EndTime <= now
+    #     ).all()
 
-        for auction in expired_auctions:
-            auction.Status = "Ended"
-            self.db.commit()
+    #     for auction in expired_auctions:
+    #         auction.Status = "Ended"
+    #         self.db.commit()
 
-            # Notify the highest bidder
-            if auction.HighestBidderID:
-                message = f"Congratulations! You have won the auction for {auction.CardID} with a bid of ${auction.HighestBid}."
-                notification = Notification(
-                    BidderID=auction.HighestBidderID,
-                    AuctionID=auction.AuctionID,
-                    Message=message,
-                    TimeSent=datetime.now()
-                )
-                self.db.add(notification)
+    #         # Notify the highest bidder
+    #         if auction.HighestBidderID:
+    #             message = f"Congratulations! You have won the auction for {auction.CardID} with a bid of ${auction.HighestBid}."
+    #             notification = Notification(
+    #                 ReceiverID=auction.HighestBidderID,
+    #                 AuctionID=auction.AuctionID,
+    #                 Message=message,
+    #                 TimeSent=datetime.now()
+    #             )
+    #             self.db.add(notification)
 
-            # Notify the seller
-            message = f"Your auction for {auction.CardID} has ended. Final bid: ${auction.HighestBid}."
-            notification = Notification(
-                BidderID=auction.SellerID,  # Notify the seller as well
-                AuctionID=auction.AuctionID,
-                Message=message,
-                TimeSent=datetime.now()
-            )
-            self.db.add(notification)
+    #         # Notify the seller
+    #         message = f"Your auction for {auction.CardID} has ended. Final bid: ${auction.HighestBid}."
+    #         notification = Notification(
+    #             ReceiverID=auction.SellerID,  # Notify the seller as well
+    #             AuctionID=auction.AuctionID,
+    #             Message=message,
+    #             TimeSent=datetime.now()
+    #         )
+    #         self.db.add(notification)
 
-            self.db.commit()
+    #         self.db.commit()
 
-        print(f"{len(expired_auctions)} auctions ended.")
+    #     print(f"{len(expired_auctions)} auctions ended.")
 
     def schedule_auction_cleanup(background_tasks: BackgroundTasks, db: Session):
         auction_service = AuctionService(db)
@@ -439,3 +445,37 @@ class AuctionService:
         if auction.EndTime < current_time and auction.Status != "Closed":
             auction.Status = "Closed"
             self.db.commit()
+
+            # Create a notification for the highest bidder if there is one
+            if auction.HighestBidderID:
+                message = f"Congratulations! You have won the auction for {auction.CardID} with a bid of ${auction.HighestBid}."
+                notification = Notification(
+                    ReceiverID=auction.HighestBidderID,
+                    AuctionID=auction.AuctionID,
+                    Message=message,
+                    TimeSent=datetime.now()  # Set the current timestamp
+                )
+                self.db.add(notification)
+
+                # Send WebSocket notification to the previous highest bidder
+                highest_bidder_profile = self.db.query(Profile).filter(Profile.UserID == auction.HighestBidderID).first()
+                highest_bidder_email = highest_bidder_profile.Email
+                self.websocket_manager.send_notification(highest_bidder_email, message)
+
+                # Create a notification for the seller
+                message = f"Your auction for {auction.CardID} has ended. Final bid: ${auction.HighestBid}."
+                notification = Notification(
+                    ReceiverID=auction.SellerID,  # Notify the seller
+                    AuctionID=auction.AuctionID,
+                    Message=message,
+                    TimeSent=datetime.now()  # Set the current timestamp
+                )
+                self.db.add(notification)
+
+                # Commit the notifications to the database
+                self.db.commit()
+                
+                # Send WebSocket notification to the previous highest bidder
+                seller_bidder_profile = self.db.query(Profile).filter(Profile.UserID == auction.SellerID).first()
+                seller_bidder_email = seller_bidder_profile.Email
+                self.websocket_manager.send_notification(seller_bidder_email, message)

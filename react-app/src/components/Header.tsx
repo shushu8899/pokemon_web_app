@@ -7,10 +7,46 @@ import { useAuth } from '../context/AuthContext';
 const Header = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [websocket, setWebsocket] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false); // State to show notifications dropdown
+
 
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && user?.email) {
+      // Use user?.email to establish the WebSocket connection
+      const ws = new WebSocket(`ws://127.0.0.1:8000/ws/${user.email}`);
+
+      ws.onopen = () => {
+        console.log('WebSocket connection established');
+      };
+
+      ws.onmessage = (event) => {
+        const newNotification = JSON.parse(event.data);
+        setNotifications((prevNotifications) => [...prevNotifications, newNotification]);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+      };
+
+      setWebsocket(ws);
+
+      return () => {
+        if (ws) {
+          ws.close();
+        }
+      };
+    }
+  }, [isAuthenticated, user?.email]); // Add user?.email as a dependency
+
+  const handleBellClick = () => {
+    setShowNotifications((prevState) => !prevState); // Toggle visibility of the notifications dropdown
   };
 
   return (
@@ -109,6 +145,40 @@ const Header = () => {
               ))}
             </>
           )}
+
+          {/* Notification Bell Icon */}
+          <div className="relative">
+            <button
+              className="w-20 py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]"
+              onClick={handleBellClick} // Toggle notifications dropdown
+            >
+              🔔
+            </button>
+
+            {/* Badge Shows Only If Notifications Exist */}
+            {notifications.length > 0 && (
+              <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full px-2 py-1 text-sm">
+                {notifications.length}
+              </div>
+            )}
+
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-12 bg-white border rounded shadow-lg w-48 p-2">
+                {notifications.length > 0 ? (
+                  <ul>
+                    {notifications.map((notification, index) => (
+                      <li key={index} className="py-2 px-4 text-sm text-gray-700">
+                        {notification.message}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-gray-500 text-center py-2">No notifications</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Search Button */}
           <Link to={PUBLIC_ROUTES.SEARCH}>

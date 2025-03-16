@@ -15,7 +15,7 @@ class Notification(Base):
     __tablename__ = 'notifications'
     
     NotificationID = Column(Integer, primary_key=True, autoincrement=True)
-    BidderID = Column(Integer, ForeignKey('profiles.UserID'), nullable=False)  # Link to the Profile (user)
+    ReceiverID = Column(Integer, ForeignKey('profiles.UserID'), nullable=False)  # Link to the Profile (user)
     AuctionID = Column(Integer, ForeignKey('auctions.AuctionID'), nullable=False)  # Link to Auction
     Message = Column(String, nullable=False)
     TimeSent = Column(DateTime, nullable=False, default=datetime)  # Timestamp for the notification
