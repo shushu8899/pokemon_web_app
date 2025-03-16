@@ -96,11 +96,11 @@ const AuctionList: React.FC = () => {
               
                 return (
                   <div key={auction.AuctionID} style={{
-                    border: "2px solid #FFD700",
+                    border: "2px solidrgb(33, 32, 32)",
                     borderRadius: "12px",
                     padding: "10px",
                     textAlign: "center",
-                    backgroundColor: "#003366",
+                    backgroundColor: "white",
                     boxShadow: "4px 4px 12px rgba(255, 215, 0, 0.2)",
                     transition: "transform 0.3s ease-in-out",
                     cursor: "pointer",
@@ -150,7 +150,7 @@ const AuctionList: React.FC = () => {
                       fontSize: "14px",
                       lineHeight: "1.2", // Reduced line height for compact text
                       textAlign: "left",
-                      color: "#FFD700" // Gold text for better readability
+                      color: "black" 
                     }}>
                       <p><strong>🔹 ID:</strong> {auction.AuctionID}</p>
                       <p><strong>🏆 Card Name:</strong> {auction.CardName}</p>
@@ -163,8 +163,8 @@ const AuctionList: React.FC = () => {
                           color: auctionTimer.expired 
                             ? "red" 
                             : (parseInt(auctionTimer.timeLeft) > 86400) // ✅ Less than 1 day (86400 seconds)
-                              ? "yellow" 
-                              : "#FFD700"
+                              ? "navy" 
+                              : "black"
                         }}>
                           ⏳ {auctionTimer.expired ? "Auction Ended" : `Time Left: ${auctionTimer.timeLeft}`}
                       </p>
