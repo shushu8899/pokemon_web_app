@@ -11,6 +11,7 @@ from app.models.auction import AuctionInfo
 from app.models.notifications import Notification
 from typing import Dict
 from sqlalchemy.orm import Session
+from app.dependencies.auth import req_user_role #Add this
 import os
 import shutil
 import requests
@@ -32,7 +33,9 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
     total_pages =  auction_service.get_total_page()
     print(auctions)
     print(total_pages)
-    return {"auctions": auctions, "total_pages": total_pages}
+    for auction in auctions:
+        auction["EndTime"] = auction["EndTime"].timestamp()
+    return {"auctions": auctions, "total_pages": int(total_pages)}
 
 @router.get("/auction-details/{auction_id}", response_model=dict)
 def display_auction_details(

@@ -7,6 +7,24 @@ from app.dependencies.services import get_search_service
 router = APIRouter()
 # search_service = SearchService(get_db)
 
+@router.get("/search/all")
+def search_all_tables(query: str, search_service: SearchService = Depends(get_search_service)):
+    """
+    Endpoint to search across all configured tables based on the search query.
+    """
+    results = search_service.search_all_tables(query)
+
+    total_results = sum(len(table_results) for table_results in results.values())
+    
+    if total_results == 0:
+        raise HTTPException(status_code=404, detail="No results found")
+    
+    return {
+        "total": total_results,
+        "tables_matched": len(results),
+        "results": results
+    }
+
 @router.get("/search/cards")
 def search_cards(Card_search: str, search_service: SearchService = Depends(get_search_service)):
     """
