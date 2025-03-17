@@ -302,8 +302,6 @@ class AuctionService:
         else:
             #Save the previous highest bidder ID before updating the auction
             previous_highest_bidder = auction.HighestBidderID
-            previous_bidder_profile = self.db.query(Profile).filter(Profile.UserID == previous_highest_bidder).first()
-            previous_bidder_email = previous_bidder_profile.Email
             previous_highest_bid = auction.HighestBid
             for key, value in bid_info.model_dump().items():
                 setattr(auction, key, value)
@@ -326,7 +324,7 @@ class AuctionService:
                 self.db.commit()
 
                 # Send WebSocket notification to the previous highest bidder
-                self.websocket_manager.send_notification(previous_bidder_email, message)
+                self.websocket_manager.send_notification(previous_highest_bidder, message)
 
         return auction
 
@@ -458,9 +456,7 @@ class AuctionService:
                 self.db.add(notification)
 
                 # Send WebSocket notification to the previous highest bidder
-                highest_bidder_profile = self.db.query(Profile).filter(Profile.UserID == auction.HighestBidderID).first()
-                highest_bidder_email = highest_bidder_profile.Email
-                self.websocket_manager.send_notification(highest_bidder_email, message)
+                self.websocket_manager.send_notification(auction.HighestBidderID, message)
 
                 # Create a notification for the seller
                 message = f"Your auction for {auction.CardID} has ended. Final bid: ${auction.HighestBid}."
@@ -476,6 +472,4 @@ class AuctionService:
                 self.db.commit()
                 
                 # Send WebSocket notification to the previous highest bidder
-                seller_bidder_profile = self.db.query(Profile).filter(Profile.UserID == auction.SellerID).first()
-                seller_bidder_email = seller_bidder_profile.Email
-                self.websocket_manager.send_notification(seller_bidder_email, message)
+                self.websocket_manager.send_notification(auction.SellerID, message)

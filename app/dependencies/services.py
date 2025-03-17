@@ -3,6 +3,7 @@ from app.services.auction_service import AuctionService
 from app.services.profile_service import ProfileService
 from app.services.search_service import SearchService
 from app.services.card_service import CardService
+from app.services.websocket_manager import WebSocketManager
 from app.dependencies.db import get_db
 from sqlalchemy.orm import Session
 
@@ -17,3 +18,6 @@ def get_search_service(db: Session = Depends(get_db)) -> SearchService:
 
 def get_card_service(db: Session = Depends(get_db)) -> CardService:
     return CardService(db)
+
+def get_websocket_manager(db: Session = Depends(get_db)) -> WebSocketManager:
+    return WebSocketManager(db=db)
