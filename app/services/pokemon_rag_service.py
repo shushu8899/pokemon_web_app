@@ -40,8 +40,19 @@ class PokemonRagService:
             # Extract basic details
             pokemon_info = {
                 "name": card_data.get("name", "Unknown"),
+                "supertype": card_data.get("supertype", "Unknown"),
+                "subtypes": card_data.get("subtypes", "Unknown"),
+                "level": card_data.get("level", "Unknown"),
+                "hp": card_data.get("hp", "Unknown"),
+                "types": card_data.get("types", "Unknown"),  
+                "evolvesFrom": card_data.get("evolvesFrom", "Unknown"),  
                 "set": card_data.get("set", {}).get("name", "Unknown"),
                 "rarity": card_data.get("rarity", "Unknown"),
+                "tcgplayer": card_data.get("tcgplayer", "Unknown"),
+                "attacks": card_data.get("attacks", "Unknown"),  
+                "weaknesses": card_data.get("weaknesses", "Unknown"),  
+                "resistances": card_data.get("resistances", "Unknown"),
+                "flavorText": card_data.get("flavorText", "Unknown"),                                                                     
                 "image_url": card_data.get("images", {}).get("large", "No Image Available"),
             }
 
