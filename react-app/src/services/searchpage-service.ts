@@ -48,19 +48,25 @@ interface SearchResult {
   Username?: string;
   CurrentRating?: string;
   Email?: string;
-  _table?: string; // Add table information
+  _table?: string;
+  CardQuality?: string;
+  AuctionID?: string;
+  AuctionStatus?: string;
+  ImageURL?: string;
 }
 
 const BASE_URL = "http://127.0.0.1:8000";
 
 export const fetchSearchResults = async (
   query: string,
-  setResults: (results: SearchResult[]) => void
-  // setLoading: (loading: boolean) => void
+  setResults: (results: SearchResult[]) => void,
+  setLoading: (loading: boolean) => void
 ) => {
-  // setLoading(true);
+  setLoading(true);
   try {
+    console.log('Making API request to:', `${BASE_URL}/search/all?query=${encodeURIComponent(query)}`);
     const response = await axios.get(`${BASE_URL}/search/all?query=${encodeURIComponent(query)}`);
+    console.log('API Response:', response.data);
 
     if (response.status !== 200) {
       throw new Error(`Server responded with status ${response.status}`);
@@ -74,18 +80,19 @@ export const fetchSearchResults = async (
           allResults.push(
             ...tableResults.map((result: any) => ({
               ...result,
-              _table: tableName, // Keep track of which table the result came from
+              _table: tableName,
             }))
           );
         }
       });
     }
 
+    console.log('Processed results:', allResults);
     setResults(allResults);
   } catch (error) {
     console.error("Error fetching search results:", error);
     setResults([]);
-  // } finally {
-  //   setLoading(false);
+  } finally {
+    setLoading(false);
   }
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import SearchBar from "./SearchBar";
 import SearchResults from "./SearchResult";
 import pokemonSpinner from "../assets/pokeballloading.gif";
@@ -21,6 +21,29 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+  const loadingTimerRef = useRef<number | null>(null);
+
+  // Custom loading state setter that respects minimum display time
+  const setLoadingWithDelay = (isLoading: boolean) => {
+    if (isLoading) {
+      // If turning loading on, just do it immediately
+      setLoading(true);
+      
+      // Clear any existing timers
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    } else {
+      // If turning loading off, ensure minimum 2 second display time
+      if (!loadingTimerRef.current) {
+        loadingTimerRef.current = setTimeout(() => {
+          setLoading(false);
+          loadingTimerRef.current = null;
+        }, 2000);
+      }
+    }
+  };
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) {
@@ -29,18 +52,16 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
       return;
     }
 
-    setLoading(true);
+    // Start the loading state
+    setLoadingWithDelay(true);
     setSearchPerformed(true);
 
     try {
-      await fetchSearchResults(query, setResults, setLoading);
-      // Set short delay before loading results
-      setTimeout(() => {
-        setLoading(false);
-      }, 1000); // 2 seconds delay
+      // Use the custom loading setter
+      await fetchSearchResults(query, setResults, setLoadingWithDelay);
     } catch (error) {
       console.error("Error fetching search results", error);
-      setLoading(false);
+      setLoadingWithDelay(false);
     }
   };
 
@@ -53,7 +74,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
           <p style={{ marginTop: "20px" }}>Loading...</p>
         </div>
       ) : (
-        <SearchResults results={results} searchPerformed={searchPerformed}  />
+        <SearchResults results={results} searchPerformed={searchPerformed} />
       )}
     </div>
   );

@@ -1,38 +1,42 @@
 from sqlalchemy.orm import Session
-from app.models.card import Card, CardInfo
+from app.models.card import Card
 from app.models.profile import Profile
-from app.models.auction import Auction, AuctionInfo
-from app.services.profile_service import ProfileService
-from sqlalchemy import String, Text
+from app.models.auction import Auction
 from sqlalchemy import or_
 
 class SearchService:
     def __init__(self, db: Session):
         self.db = db
-        # To only allow certain columns to be searchable and returned
         self.searchable_models = {
-            Profile: ["Username"],
-            Card: ["CardName", "CardQuality"],
-            Auction: ["AuctionID"]
+            Profile: {
+                "searchable_columns": ["Username"],
+                "return_columns": ["Username", "Email", "NumberOfRating", "CurrentRating"]
+            },
+            Card: {
+                "searchable_columns": ["CardName", "CardQuality"],
+                "return_columns": ["OwnerID","CardName", "CardQuality"]
+            },
+            Auction: {
+                "searchable_columns": ["AuctionID", "SellerID"],
+                "return_columns": ["AuctionID", "SellerID", "Status"]
+            }
         }
+
     def search_all_tables(self, query):
         search_term = f"%{query}%"
         results = []
 
         for model, columns in self.searchable_models.items():
-            # Create filter conditions for each searchable column
-            filters = [getattr(model, column_name).like(search_term) for column_name in columns]
-
-            # Execute query with OR conditions
+            filters = [getattr(model, column_name).like(search_term) for column_name in columns["searchable_columns"]]
             if filters:
                 query_results = self.db.query(model).filter(or_(*filters)).all()
-
-                # Convert results to dictionaries
                 for item in query_results:
-                    item_dict = {col: getattr(item, col) for col in columns if hasattr(item, col)}
-                    item_dict['_table'] = model.__name__  # Add table name for reference
+                    item_dict = {col: getattr(item, col) for col in columns["return_columns"] if hasattr(item, col)}
+                    item_dict['_table'] = model.__name__
                     results.append(item_dict)
 
+
+        print(f"Debug: Total results = {len(results)}")  # Debug statement
         return results
 
     # def search_cards(self, search_query: str):

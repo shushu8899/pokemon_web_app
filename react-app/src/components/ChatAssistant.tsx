@@ -41,7 +41,7 @@ const ChatAssistant: React.FC = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-80 bg-white shadow-lg rounded-lg flex flex-col border border-black-300">
+        <div className="w-80 bg-white shadow-lg rounded-lg flex flex-col border border-gray-300">
           {/* Header */}
           <div className="bg-yellow-400 text-black px-4 py-2 flex justify-between items-center rounded-lg shadow-lg">
             <span>Chat Assistant</span>
@@ -67,9 +67,9 @@ const ChatAssistant: React.FC = () => {
           </div>
 
           {/* Input Box */}
-          <div className="p-2 border-t flex">
+          <div className="p-2 border border-gray-300 flex">
             <input
-              className="flex-grow p-2 border rounded-l-lg focus:outline-none"
+              className="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none"
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
