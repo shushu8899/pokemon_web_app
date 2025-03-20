@@ -48,6 +48,8 @@ def display_auction_details(
             raise HTTPException(status_code=404, detail="Auction not found")
         
         auction_details["EndTime"] = auction_details["EndTime"].timestamp()
+
+        return auction_details
         
     except HTTPException as e: 
         raise e

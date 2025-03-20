@@ -67,23 +67,13 @@ class AuctionService:
 
         self.db.commit()
 
+
     def get_auctions_details(self, auction_id: int):
         """
         Get auction details by auction ID
         """
         auction = ( 
-            self.db.query(            
-            Auction.AuctionID,
-            Auction.CardID,
-            Auction.Status,
-            Auction.EndTime,
-            Auction.HighestBid,
-            Card.IsValidated,
-            Card.CardName,
-            Card.CardQuality,
-            Auction.ImageURL  # Ensure this is the correct field in `Card)
-            )
-            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
+            self.db.query(Auction)
             .filter(Auction.AuctionID == auction_id) 
             .first()
         )
@@ -92,10 +82,13 @@ class AuctionService:
 
         # Update the status of the auction based on the current datetime
         current_time = datetime.now()
-        if current_time > auction.EndTime:
+        if auction.EndTime > current_time:
+            auction.Status = "In Progress"
+        elif auction.EndTime <= current_time and auction.HighestBid > 0:
             auction.Status = "Closed"
         else:
-            auction.Status = "In Progress"
+            auction.Status = "Expired"
+
         self.db.commit()
         self.db.refresh(auction)
 

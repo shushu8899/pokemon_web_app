@@ -9,6 +9,7 @@ import { clearAuthTokens, getUserEmail, isAuthenticated } from './services/auth-
 // Components
 import Header from "./components/Header";
 import AuctionList from "./components/list-grp";
+import ChatAssistant from "./components/ChatAssistant"; 
 import BiddingPage from "./components/auction-details";
 import SearchPage from "./components/SearchPage";
 import UploadCard from "./components/verify-card";
@@ -101,11 +102,13 @@ function App() {
           <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
           <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/bidding/:auctionID" element={<BiddingPage />} />
+          <Route path="/bidding/:auctionID" element={<ProtectedRoute><BiddingPage/></ProtectedRoute>} />
           
           {/* Catch-all redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {/* Chat Assistant (Floating at Bottom-Right) */}
+        <ChatAssistant />
       </div>
     </AuthProvider>
   );

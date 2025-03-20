@@ -105,8 +105,8 @@ const BiddingPage: React.FC = () => {
     if (!auction) return <h2 style={{ color: "#FFD700", textAlign: "center" }}>Loading auction details...</h2>;
 
     return (
-        <div style={{ padding: "20px", textAlign: "center", backgroundColor: "#001f3f", minHeight: "100vh" }}>
-            <h2 style={{ color: "#FFD700", fontSize: "28px", fontWeight: "bold", marginBottom: "20px" }}>
+        <div style={{ padding: "20px", textAlign: "center", backgroundColor: "white", minHeight: "100vh" }}>
+            <h2 style={{ color: "black", fontSize: "28px", fontWeight: "bold", marginBottom: "20px" }}>
                 🛒 Bidding for {auction.CardName}
             </h2>
 
@@ -117,10 +117,10 @@ const BiddingPage: React.FC = () => {
                 transition={{ duration: 0.5 }}
                 className="shimmer"
                 style={{
-                    border: "3px solid #FFD700",
+                    border: "3px solidrgb(27, 26, 23)",
                     borderRadius: "16px",
-                    backgroundColor: "#003366",
-                    boxShadow: "6px 6px 14px rgba(255, 215, 0, 0.3)",
+                    backgroundColor: "white",
+                    boxShadow: "6px 6px 14px rgba(15, 14, 13, 0.3)",
                     padding: "20px",
                     width: "400px",
                     margin: "auto"
@@ -137,11 +137,11 @@ const BiddingPage: React.FC = () => {
                 <div style={{
                     marginTop: "15px",
                     padding: "10px",
-                    borderTop: "3px solid #FFD700",
+                    borderTop: "3px solidrgb(23, 23, 21)",
                     fontSize: "16px",
                     lineHeight: "0.8",
                     textAlign: "left",
-                    color: "#FFD700"
+                    color: "black"
                 }}>
                     <p><strong>🔹 Auction ID:</strong> {auction.AuctionID}</p>
                     <p><strong>📜 Status:</strong> {auction.Status}</p>
@@ -153,9 +153,9 @@ const BiddingPage: React.FC = () => {
                         fontWeight: "bold",
                         color: timer.expired 
                         ? "red" 
-                        : (parseInt(timer.timeLeft) > 86400) // ✅ Less than 1 day (86400 seconds)
-                            ? "yellow" 
-                            : "#FFD700"
+                        : (parseInt(timer.timeLeft) > 86400) //  Less than 1 day (86400 seconds)
+                              ? "navy" 
+                              : "black"
                     }}>
                         ⏳ {timer.expired ? "Auction Ended" : `Time Left: ${timer.timeLeft}`}
                     </p>
@@ -174,9 +174,9 @@ const BiddingPage: React.FC = () => {
                         width: "200px",
                         fontSize: "16px",
                         borderRadius: "5px",
-                        border: "1px solid #FFD700",
-                        backgroundColor: "#003366",
-                        color: "#FFD700",
+                        border: "black 2px solid",
+                        backgroundColor: "white",
+                        color: "black",
                         textAlign: "center"
                     }}
                 />
@@ -187,7 +187,7 @@ const BiddingPage: React.FC = () => {
                         marginLeft: "10px",
                         padding: "10px 20px",
                         fontSize: "16px",
-                        backgroundColor: "#FFD700",
+                        backgroundColor: "yellow",
                         border: "none",
                         borderRadius: "5px",
                         cursor: "pointer"
