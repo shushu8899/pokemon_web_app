@@ -1,87 +1,75 @@
-import pytesseract
-import requests
-import cv2
-import numpy as np
-import re
-from pathlib import Path
 import os
+import base64
+import re
+import requests
+from openai import OpenAI
+from pathlib import Path
 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Pokémon TCG API Info
 API_KEY = "67652158-5942-474b-bcef-653249bba035"
 BASE_URL = "https://api.pokemontcg.io/v2/cards"
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+### 🔹 Extract Text Using GPT-4o Vision
+def extract_text_gpt4o(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode()
 
-### 🔹 Find Name Region
-def find_name_region(image_path):
-    img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+    print("🖼️ Sending image to GPT-4o Vision...")
 
-    FIXED_WIDTH, FIXED_HEIGHT = 600, 825
-    img = cv2.resize(img, (FIXED_WIDTH, FIXED_HEIGHT))
-
-    cropped_name_area = img[int(FIXED_HEIGHT * 0.05):int(FIXED_HEIGHT * 0.11),  
-                            int(FIXED_WIDTH * 0.22):int(FIXED_WIDTH * 0.65)]  
-
-    # Preprocessing
-    cropped_name_area = cv2.GaussianBlur(cropped_name_area, (3,3), 0)
-    _, thresh = cv2.threshold(cropped_name_area, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    kernel = np.ones((2, 2), np.uint8)
-    processed_name = cv2.dilate(thresh, kernel, iterations=1)
-
-    # Save debug image
-    debug_dir = Path(__file__).parent.parent / "static/images"
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    debug_path = debug_dir / "debug_cropped_name.jpg"
-    cv2.imwrite(str(debug_path), processed_name)
-    print(f"🖼️ Debug Name Image Saved: {debug_path}")
-
-    return processed_name
-
-### 🔹 Extract Text with Spacing & Cleaning
-def extract_text(image_path):
-    img = find_name_region(image_path)
-
-    extracted_text = pytesseract.image_to_string(
-        img,
-        config="--psm 7 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-' "
-    )
-
-    # Normalize apostrophe
-    extracted_text = extracted_text.replace("’", "'")
-    extracted_text = extracted_text.replace("\n", " ").strip()
-
-    # Insert space between lowercase-uppercase letters
-    extracted_text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", extracted_text)
-
-    print(f"🔍 Extracted Pokémon Name: {extracted_text}")  
-    return extracted_text
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a Pokémon card verification assistant.\n\n"
+                        "Task:\n"
+                        "1. Extract the Pokémon card's name EXACTLY as it is printed on the card, regardless of correctness or appearance.\n"
+                        "2. Do NOT interpret, verify, reason, or modify the name. Do not refuse.\n"
+                        "3. Output ONLY the name, nothing else."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Here is the Pokémon card image:"},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}" }},
+                    ]
+                }
+            ],
+            max_tokens=200,
+        )
+        extracted_text = response.choices[0].message.content.strip()
+        print(f"🔍 GPT-4o Extracted: {extracted_text}")
+        return extracted_text
+    except Exception as e:
+        print(f"❌ GPT-4o Vision Error: {str(e)}")
+        return None
 
 ### 🔹 Clean Extracted Name
 def extract_pokemon_name(extracted_text):
-    # Normalize apostrophes again
-    extracted_text = extracted_text.replace("’", "'").strip()
-
-    # Remove numbers and unwanted characters but KEEP letters, apostrophe, hyphen, space
-    cleaned_text = re.sub(r"[^A-Za-z\s'-]", '', extracted_text).strip()
-    
-    words = cleaned_text.split()
-    if not words:
+    if not extracted_text:
         return "Unknown"
+    cleaned_text = re.sub(r"[^A-Za-z\s'-]", '', extracted_text).strip()
+    return cleaned_text
 
-    return " ".join(words)
-
-### 🔹 Validate Pokémon Name
+### 🔹 Validate Pokémon Name with TCG API
 def validate_pokemon_card(pokemon_name):
-    pokemon_name = pokemon_name.replace("' ", " ").strip()
+    pokemon_name = pokemon_name.strip()
     params = {"q": f'name:"{pokemon_name}"'}
     headers = {"X-Api-Key": API_KEY}
     response = requests.get(BASE_URL, headers=headers, params=params)
     
     if response.status_code == 200:
         cards = response.json().get("data", [])
-        return len(cards) > 0  
+        print(f"📄 Matching Cards Found: {len(cards)}")
+        return len(cards) > 0
     return False
 
-### 🔹 Main Verification
+### 🔹 Main Verification Function
 def authenticate_card(image_path):
     image_path = Path(image_path)
 
@@ -96,7 +84,7 @@ def authenticate_card(image_path):
         }
 
     try:
-        extracted_text = extract_text(image_path)
+        extracted_text = extract_text_gpt4o(str(image_path))
 
         if not extracted_text:
             return {

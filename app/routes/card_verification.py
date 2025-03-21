@@ -10,9 +10,6 @@ from app.models.profile import Profile
 
 router = APIRouter()
 
-@router.get("/test")
-async def test_verification():
-    return {"message": "Verification router is working"}
 
 @router.post("/verify-card/{card_id}", dependencies=[Depends(req_user_or_admin)])
 async def verify_card(
