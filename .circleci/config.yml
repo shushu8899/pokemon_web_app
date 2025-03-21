@@ -75,7 +75,7 @@ workflows:
       - test
       - build-and-test:
           requires:
-              -test
+              - test
       - deploy:
           requires:
               - test
