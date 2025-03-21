@@ -12,8 +12,8 @@ class PokemonRagService:
         self.pokemon_api_key = os.getenv("POKEMON_TCG_API_KEY")
         
         # ✅ OpenAI API Key is automatically handled by LangChain
-        if not os.getenv("OPENAI_API_KEY"):
-            raise ValueError("❌ OPENAI_API_KEY is missing! Set it in the environment.")
+        if not os.getenv("OPEN_API_KEY"):
+            raise ValueError("❌ OPEN_API_KEY is missing! Set it in the environment.")
 
         self.llm = ChatOpenAI(model_name="gpt-4o", temperature=0)  # ✅ Matches prof's method
 
