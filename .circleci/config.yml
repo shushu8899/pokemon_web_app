@@ -41,10 +41,14 @@ jobs:
           command: |
             . venv/bin/activate
             bash integration_test_script.sh
+      - run :
+          name: Waiting for app to start
+          command: |
+              sleep 20
       - run:
           name: Seed Data
           command: |
-            python3 seed_data.py 
+            python3 tests/seed_data.py 
 
   deploy:
     docker:
