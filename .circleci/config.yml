@@ -39,6 +39,7 @@ jobs:
       - run:
           name: Setup Test DB
           command: |
+            . venv/bin/activate
             bash integration_test_script.sh
       - run:
           name: Seed Data
