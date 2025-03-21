@@ -37,7 +37,7 @@ def match_images(uploaded_image_path, official_image_path):
     img2 = cv2.imread(str(official_image_path), cv2.IMREAD_GRAYSCALE)
 
     if img1 is None or img2 is None:
-        return False
+        return False, 0
 
     orb = cv2.ORB_create()
 
@@ -47,19 +47,22 @@ def match_images(uploaded_image_path, official_image_path):
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
     if des1 is None or des2 is None:
-        return False
+        return False, 0
 
     matches = bf.match(des1, des2)
-
     matches = sorted(matches, key=lambda x: x.distance)
     good_matches = [m for m in matches if m.distance < 60]
 
     print(f"🔍 Total Matches: {len(matches)} | Good Matches: {len(good_matches)}")
 
+    # Print match percentage
+    match_percentage = (len(good_matches) / len(matches)) * 100 if matches else 0
+    print(f"🎯 Match Accuracy: {match_percentage:.2f}%")
+
     # Threshold (Tune as needed)
-    if len(good_matches) > 20:
-        return True
-    return False
+    is_authentic = len(good_matches) > 20
+    return is_authentic, match_percentage
+
 
 ### 🔹 Main Verification Function (Same Name)
 def authenticate_card(image_path, pokemon_name):
@@ -105,7 +108,7 @@ def authenticate_card(image_path, pokemon_name):
             }
 
         # Match images
-        is_authentic = match_images(image_path, official_img_path)
+        is_authentic, match_percentage = match_images(image_path, official_img_path)
 
         # Optional: Delete official image after matching
         if official_img_path.exists():
@@ -115,7 +118,8 @@ def authenticate_card(image_path, pokemon_name):
             "message": "Verification complete",
             "result": {
                 "result": "Authentic" if is_authentic else "Fake",
-                "pokemon_name": pokemon_name
+                "pokemon_name": pokemon_name,
+                "match_percentage": f"{match_percentage:.2f}%"
             }
         }
 
