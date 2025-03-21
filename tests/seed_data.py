@@ -6,11 +6,14 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.db.db import SessionLocal
-from app.models.profile import Profile
-from app.models.card import Card
-from app.models.auction import Auction
 
 from datetime import datetime, timedelta, timezone
+
+from app.services.card_service import CardService
+from app.models.profile import Profile, ProfileInfo
+from app.models.card import Card, CardInfo
+from app.models.auction import Auction, AuctionInfo
+from app.models.notifications import Notification, NotificationInfo
 
 
 def seed_profiles():
