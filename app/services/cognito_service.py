@@ -18,9 +18,9 @@ CognitoAdminRole = os.getenv("COGNITO_ADMIN_ROLE", "Admins")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 print("COGNITO_REGION:", os.getenv("COGNITO_REGION"))
-print("COGNITO_USER_POOL_ID:", os.getenv("COGNITO_USER_POOL_ID1"))
-print("COGNITO_CLIENT_ID:", os.getenv("COGNITO_CLIENT_ID1"))
-print("COGNITO_CLIENT_SECRET:", os.getenv("COGNITO_CLIENT_SECRET1"))
+print("COGNITO_USER_POOL_ID:", os.getenv("COGNITO_USER_POOL_ID"))
+print("COGNITO_CLIENT_ID:", os.getenv("COGNITO_CLIENT_ID"))
+print("COGNITO_CLIENT_SECRET:", os.getenv("COGNITO_CLIENT_SECRET"))
 
 class CognitoService:
     def __init__(self):
