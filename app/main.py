@@ -73,7 +73,7 @@ app.include_router(profile_rating.router, prefix="/profile", tags=["Rate the Sel
 app.include_router(search.router, prefix="/api", tags=["Search"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(profile.router, tags=["Profile"])
-app.include_router(websocket.router, prefix="/Websocket", tags=["Websocket"])
+app.include_router(websocket.router)
 
 @app.get("/")
 def read_root():
@@ -81,4 +81,4 @@ def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000, ws="websockets")

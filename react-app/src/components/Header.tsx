@@ -1,29 +1,25 @@
-import { Routes, Route, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import Logo from "../assets/logo.svg.png"; // Ensure you have the correct path to the logo
-import { navigation, NAV_LINKS, PUBLIC_ROUTES, PROTECTED_ROUTES } from "../constants";
+import Logo from "../assets/logo.svg.png";
+import { NAV_LINKS, PUBLIC_ROUTES, PROTECTED_ROUTES } from "../constants";
 import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
-  const [notifications, setNotifications] = useState([]);
-  const [websocket, setWebsocket] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false); // State to show notifications dropdown
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
+  // Function to connect WebSocket
+  const connectWebSocket = () => {
+    if (isAuthenticated && !websocket) {
+      console.log("🔗 Establishing WebSocket connection...");
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && user?.email) {
-      // Use user?.email to establish the WebSocket connection
-      const ws = new WebSocket(`ws://127.0.0.1:8000/ws/${user.email}`);
+      const ws = new WebSocket(`ws://localhost:8000/ws`);
 
       ws.onopen = () => {
-        console.log('WebSocket connection established');
+        console.log("✅ WebSocket connected");
       };
 
       ws.onmessage = (event) => {
@@ -31,22 +27,49 @@ const Header = () => {
         setNotifications((prevNotifications) => [...prevNotifications, newNotification]);
       };
 
+      ws.onerror = (error) => {
+        console.error("❌ WebSocket Error:", error);
+      };
+
       ws.onclose = () => {
-        console.log('WebSocket connection closed');
+        console.log("🔌 WebSocket connection closed");
+        setWebsocket(null); // Ensure cleanup
       };
 
       setWebsocket(ws);
-
-      return () => {
-        if (ws) {
-          ws.close();
-        }
-      };
     }
-  }, [isAuthenticated, user?.email]); // Add user?.email as a dependency
+  };
+
+  // Function to disconnect WebSocket
+  const disconnectWebSocket = () => {
+    if (websocket) {
+      console.log("🔌 Closing WebSocket connection");
+      websocket.close();
+      setWebsocket(null);
+    }
+  };
+
+  // Manage WebSocket connection on authentication changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      connectWebSocket();
+    } else {
+      disconnectWebSocket();
+    }
+
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [isAuthenticated]); 
+
+  const handleLogout = () => {
+    disconnectWebSocket();
+    logout();
+    navigate('/');
+  };
 
   const handleBellClick = () => {
-    setShowNotifications((prevState) => !prevState); // Toggle visibility of the notifications dropdown
+    setShowNotifications((prevState) => !prevState);
   };
 
   return (
@@ -58,32 +81,27 @@ const Header = () => {
 
         {/* Main Navigation */}
         <nav className="relative z-2 space-x-30 flex items-center justify-center ml-auto bg-white h-full">
-          {/* Main Links */}
           {NAV_LINKS.MAIN.map((item) => (
-            <Link key={item.path} to={item.path}>
-              <a className="w-40 py-2 font-bold transition-colors hover:text-[#0908ba]" >
-                {item.label}
-              </a>
+            <Link key={item.path} to={item.path} className="w-40 py-2 font-bold transition-colors hover:text-[#0908ba]">
+              {item.label}
             </Link>
           ))}
 
           {/* Card Dropdown */}
           <div className="relative inline-block text-left group">
-            <button 
-            className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" 
-            style={{ fontFamily: "Roboto" }}>
+            <button className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" style={{ fontFamily: "Roboto" }}>
               Card
             </button>
             <div className="absolute left-1/2 -translate-x-1/2 w-40 rounded-md shadow-lg bg-white opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 mt-5">
               <div className="py-2" role="menu">
                 <Link to={PROTECTED_ROUTES.CARD_ENTRY} className="block px-4 py-2 text-gray-700">
-                  <button className="text-black font-bold transition-colors hover:text-[#0908ba]">Upload Card</button>
+                  Upload Card
                 </Link>
                 <Link to={PROTECTED_ROUTES.UNVALIDATED_CARDS} className="block px-4 py-2 text-gray-700">
-                  <button className="text-black font-bold transition-colors hover:text-[#0908ba]">Verify Card</button>
+                  Verify Card
                 </Link>
                 <Link to={PROTECTED_ROUTES.MY_CARDS} className="block px-4 py-2 text-gray-700">
-                  <button className="text-black font-bold transition-colors hover:text-[#0908ba]">My Cards</button>
+                  My Cards
                 </Link>
               </div>
             </div>
@@ -91,29 +109,27 @@ const Header = () => {
 
           {/* Auction Dropdown */}
           <div className="relative inline-block text-left group">
-            <button className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" 
-            style={{fontFamily: "Roboto" }}>
+            <button className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" style={{ fontFamily: "Roboto" }}>
               Auction
             </button>
             <div className="absolute left-1/2 -translate-x-1/2 w-40 rounded-md shadow-lg bg-white opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 mt-5">
               <div className="py-1" role="menu">
                 <Link to={PROTECTED_ROUTES.CREATE_AUCTION} className="block px-4 py-2">
-                  <button className="text-black font-bold transition-colors hover:text-[#0908ba]">Create Auction</button>
+                  Create Auction
                 </Link>
                 <Link to={PROTECTED_ROUTES.MY_AUCTIONS} className="block px-4 py-2">
-                  <button className="text-black font-bold transition-colors hover:text-[#0908ba]">My Auctions</button>
+                  My Auctions
                 </Link>
               </div>
             </div>
           </div>
         </nav>
 
+        {/* Right Section */}
         <div className="ml-auto flex items-center space-x-4">
-          {/* Auth/Account Section */}
           {isAuthenticated ? (
             <div className="relative inline-block text-left group">
-              <button className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" 
-                style={{ fontFamily: "Roboto" }}>
+              <button className="py-2 text-black font-bold transition-colors hover:text-[#0908ba]" style={{ fontFamily: "Roboto" }}>
                 Account
               </button>
               <div className="absolute left-1/2 -translate-x-1/2 w-48 rounded-md shadow-lg bg-white opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 mt-5">
@@ -122,47 +138,34 @@ const Header = () => {
                     {user?.email}
                   </div>
                   <Link to={PROTECTED_ROUTES.PROFILE} className="block px-4 py-2">
-                    <button className="text-black font-bold w-full text-left transition-colors hover:text-[#0908ba]">
-                      Profile
-                    </button>
+                    Profile
                   </Link>
-                  <button onClick={handleLogout} 
-                    className="block w-full text-left px-4 py-2 text-black font-bold transition-colors hover:text-[#0908ba]">
+                  <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-black font-bold transition-colors hover:text-[#0908ba]">
                     Logout
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            // Auth Links
-            <>
-              {NAV_LINKS.AUTH.map((item) => (
-                <Link key={item.path} to={item.path}>
-                  <button className="py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]" style={{ fontFamily: "Roboto" }}>
-                    {item.label}
-                  </button>
-                </Link>
-              ))}
-            </>
+            NAV_LINKS.AUTH.map((item) => (
+              <Link key={item.path} to={item.path} className="py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]">
+                {item.label}
+              </Link>
+            ))
           )}
 
           {/* Notification Bell Icon */}
           <div className="relative">
-            <button
-              className="w-20 py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]"
-              onClick={handleBellClick} // Toggle notifications dropdown
-            >
+            <button className="w-20 py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]" onClick={handleBellClick}>
               🔔
             </button>
 
-            {/* Badge Shows Only If Notifications Exist */}
             {notifications.length > 0 && (
               <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full px-2 py-1 text-sm">
                 {notifications.length}
               </div>
             )}
 
-            {/* Notifications Dropdown */}
             {showNotifications && (
               <div className="absolute right-0 top-12 bg-white border rounded shadow-lg w-48 p-2">
                 {notifications.length > 0 ? (
@@ -182,8 +185,7 @@ const Header = () => {
 
           {/* Search Button */}
           <Link to={PUBLIC_ROUTES.SEARCH}>
-            <button className="w-20 py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]" 
-            style={{ borderRadius: "100px" }}>
+            <button className="w-20 py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba]" style={{ borderRadius: "100px" }}>
               {"\u2315"}
             </button>
           </Link>
