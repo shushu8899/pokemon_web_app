@@ -10,7 +10,7 @@ echo "Deleting migrations folder..."
 rm -rf migrations
 
 echo "Initializing Alembic migrations..."
-alembic init migrations
+python3 -m alembic init migrations
 
 ENV_FILE="migrations/env.py"
 TEMP_FILE="temp.txt"
@@ -38,10 +38,10 @@ awk -v search="$SEARCH_TERM" -v replacement="$REPLACEMENT" '
 }' "$ENV_FILE" > "$TEMP_FILE" && mv "$TEMP_FILE" "$ENV_FILE"
 
 echo "Creating Alembic revision for Auction App..."
-alembic revision --autogenerate -m "Init Auction App"
+python3 -m alembic revision --autogenerate -m "Init Auction App"
 
 echo "Applying migrations..."
-alembic upgrade head
+python3 -m alembic upgrade head
 
 echo "Starting FastAPI application with uvicorn..."
 uvicorn app.main:app --reload

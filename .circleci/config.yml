@@ -73,7 +73,9 @@ workflows:
   test:
     jobs:
       - test
-      - build-and-test
+      - build-and-test:
+          requires:
+              -test
       - deploy:
           requires:
               - test
@@ -81,3 +83,4 @@ workflows:
             branches:
               only: 
                 - database-debugging
+                - main
