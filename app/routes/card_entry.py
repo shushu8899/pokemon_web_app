@@ -9,6 +9,7 @@ from app.db.db import get_db
 from app.dependencies.auth import req_user_or_admin
 from app.services.profile_service import get_current_user
 from typing import List
+from app.models.auction import Auction
 
 router = APIRouter()
 
@@ -254,39 +255,29 @@ async def get_card_details(
     }
 
 @router.delete("/card-entry/{card_id}", dependencies=[Depends(req_user_or_admin)])
-async def delete_card(
-    card_id: int,
-    db: Session = Depends(get_db),
-    auth_info: dict = Depends(get_current_user)
-):
-    """
-    Delete a specific card. Users can only delete their own cards.
-    """
-    cognito_user_id = auth_info.get("sub")
+async def delete_card(card_id: int, db: Session = Depends(get_db)):
+    try:
+        # First check if the card exists
+        card = db.query(Card).filter(Card.CardID == card_id).first()
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
 
-    # Retrieve the user_id from the profiles table based on the cognito_user_id
-    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
-    if not user_profile:
-        raise HTTPException(status_code=404, detail="User profile not found")
+        # Check if the card is associated with any auctions
+        existing_auction = db.query(Auction).filter(Auction.CardID == card_id).first()
+        if existing_auction:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete card: It is associated with an active auction. Please end the auction first."
+            )
 
-    owner_id = user_profile.UserID
+        # If no auctions exist, proceed with deletion
+        db.delete(card)
+        db.commit()
+        return {"message": "Card deleted successfully"}
 
-    # Retrieve the card
-    card = db.query(Card).filter(Card.CardID == card_id, Card.OwnerID == owner_id).first()
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found or you don't have permission to delete it")
-
-    # Delete the associated image file if it exists
-    if card.ImageURL and card.ImageURL.startswith("/static/uploads/"):
-        image_path = os.path.join("static", "uploads", os.path.basename(card.ImageURL))
-        try:
-            if os.path.exists(image_path):
-                os.remove(image_path)
-        except Exception as e:
-            print(f"Error deleting image file: {e}")
-
-    # Delete the card from the database
-    db.delete(card)
-    db.commit()
-
-    return {"message": "Card deleted successfully"}
+    except HTTPException as he:
+        db.rollback()
+        raise he
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthorizationHeader, clearAuthTokens } from './auth-service';
+import { getAuthorizationHeader, clearAuthTokens, isAuthenticated } from './auth-service';
 
 // Create a custom axios instance
 const api = axios.create({
@@ -31,10 +31,15 @@ api.interceptors.response.use(
 
         // If the error is 401 and we haven't retried yet
         if (error.response?.status === 401 && !originalRequest._retry) {
-            // Clear tokens and redirect to login
-            clearAuthTokens();
-            window.location.href = '/login';
-            return Promise.reject(error);
+            originalRequest._retry = true;
+            
+            // Only clear tokens if we were previously authenticated
+            if (isAuthenticated()) {
+                clearAuthTokens();
+            }
+            
+            // Let the component handle the error and redirect
+            return Promise.reject(new Error('Authentication failed. Please log in again.'));
         }
 
         return Promise.reject(error);
