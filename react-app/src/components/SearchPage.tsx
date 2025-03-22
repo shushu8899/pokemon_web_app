@@ -7,6 +7,9 @@ interface SearchResult {
   id: string;
   CardName?: string;
   Username?: string;
+  ImageURL?: string;
+  _table?: string;
+  AuctionID?: string;
 }
 
 interface SearchPageProps {
@@ -59,6 +62,18 @@ const SearchPage: React.FC<SearchPageProps> = ({ fetchSearchResults }) => {
     try {
       // Use the custom loading setter
       await fetchSearchResults(query, setResults, setLoadingWithDelay);
+      // Log the results state after they've been updated
+      setTimeout(() => {
+        console.log("Search results after state update:", results);
+        // Log specifically the image URLs for debugging
+        const cardResults = results.filter(result => 
+          result._table && result._table.toLowerCase().includes('card')
+        );
+        console.log("Card image URLs:", cardResults.map(card => ({ 
+          name: card.CardName, 
+          imageURL: card.ImageURL 
+        })));
+      }, 0);
     } catch (error) {
       console.error("Error fetching search results", error);
       setLoadingWithDelay(false);

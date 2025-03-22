@@ -51,7 +51,6 @@ interface SearchResult {
   _table?: string;
   CardQuality?: string;
   AuctionID?: string;
-  AuctionStatus?: string;
   ImageURL?: string;
 }
 

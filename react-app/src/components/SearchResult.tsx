@@ -11,7 +11,6 @@ interface SearchResult {
   CurrentRating?: string;
   Email?: string;
   AuctionID?: string;
-  AuctionStatus?: string;
   ImageURL?: string;
 }
 
@@ -22,6 +21,27 @@ interface SearchResultsProps {
 
 const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed }) => {
   console.log('SearchResults received:', { results, searchPerformed });
+  
+  // Log card-specific results for debugging
+  const cardResults = results.filter(result => 
+    result._table && result._table.toLowerCase().includes('card')
+  );
+  console.log('Card results:', cardResults);
+  
+  // Function to construct proper image URL
+  const getImageUrl = (imageUrl: string | undefined): string => {
+    if (!imageUrl) return '';
+    
+    const url = imageUrl.startsWith('http') 
+      ? imageUrl 
+      : imageUrl.startsWith('/') 
+        ? `http://127.0.0.1:8000${imageUrl}`
+        : `http://127.0.0.1:8000/${imageUrl}`;
+    
+    console.log(`Original URL: ${imageUrl}, Constructed URL: ${url}`);
+    return url;
+  };
+  
   // Handle empty results
   if (searchPerformed && results.length === 0) {
     return (
@@ -61,15 +81,30 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed 
                   }}
                 >
                   {/* Display card image if available and is a card result */}
-                  {tableName.toLowerCase().includes('card') && (result.ImageURL) && (
+                  {tableName.toLowerCase().includes('card') && (
                     <div className="mb-3 flex justify-center">
-                      <img 
-                        src={result.ImageURL.startsWith('http') 
-                        ? result.ImageURL 
-                         : `http://127.0.0.1:8000${result.ImageURL}`}
-                        alt={result.CardName || "Pokemon Card"} 
-                        className="w-full max-w-[200px] rounded-lg"
-                      />
+                      {result.ImageURL ? (
+                        <>
+                          <img 
+                            src={getImageUrl(result.ImageURL)}
+                            alt={result.CardName || "Pokemon Card"} 
+                            className="w-full max-w-[200px] rounded-lg"
+                            onError={(e) => {
+                              console.error(`Failed to load image: ${result.ImageURL}, URL attempted: ${getImageUrl(result.ImageURL)}`);
+                              e.currentTarget.src = surprisedPikachu; // Fallback image
+                            }}
+                          />
+                          {/* Hidden debug info */ }
+                          <div className="hidden">
+                            Image Path: {result.ImageURL}<br/>
+                            Processed URL: {getImageUrl(result.ImageURL)}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full max-w-[200px] h-[200px] bg-gray-200 rounded-lg flex items-center justify-center">
+                          <p className="text-gray-500">No image available</p>
+                        </div>
+                      )}
                     </div>
                   )}
                   
