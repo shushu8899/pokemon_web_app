@@ -463,3 +463,18 @@ class AuctionService:
         if auction.EndTime < current_time and auction.Status != "Closed":
             auction.Status = "Closed"
             self.db.commit()
+
+    def is_card_available_for_auction(self, card_id: int) -> bool:
+        """
+        Check if a card is available for auction by checking if it's in a closed auction with a highest bidder
+        """
+        closed_auction = (
+            self.db.query(Auction)
+            .filter(
+                Auction.CardID == card_id,
+                Auction.Status == "Closed",
+                Auction.HighestBidderID.isnot(None)
+            )
+            .first()
+        )
+        return closed_auction is None
