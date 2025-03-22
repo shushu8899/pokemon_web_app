@@ -46,11 +46,14 @@ interface SearchResult {
   id: string;
   CardName?: string;
   Username?: string;
-  CurrentRating?: string;
   Email?: string;
+  UserID?: string;
+  NumberOfRating?: number;
+  CurrentRating?: number;
   _table?: string;
   CardQuality?: string;
   AuctionID?: string;
+  AuctionStatus?: string;
   ImageURL?: string;
 }
 
@@ -74,19 +77,33 @@ export const fetchSearchResults = async (
     const allResults: SearchResult[] = [];
 
     if (response.data && typeof response.data.results === "object") {
+      // Log raw profile data for debugging
+      if (response.data.results.profile) {
+        console.log('Raw profile data:', response.data.results.profile);
+      }
+
       Object.entries(response.data.results).forEach(([tableName, tableResults]) => {
         if (Array.isArray(tableResults)) {
           allResults.push(
-            ...tableResults.map((result: any) => ({
-              ...result,
-              _table: tableName,
-            }))
+            ...tableResults.map((result: any) => {
+              // Process special fields
+              const processedResult = {
+                ...result,
+                _table: tableName,
+                // Ensure numeric fields are properly typed
+                NumberOfRating: typeof result.NumberOfRating === 'string' ? parseInt(result.NumberOfRating) : result.NumberOfRating,
+                CurrentRating: typeof result.CurrentRating === 'string' ? parseFloat(result.CurrentRating) : result.CurrentRating
+              };
+              
+              console.log(`Processing ${tableName} result:`, processedResult);
+              return processedResult;
+            })
           );
         }
       });
     }
 
-    console.log('Processed results:', allResults);
+    console.log('Final processed results:', allResults);
     setResults(allResults);
   } catch (error) {
     console.error("Error fetching search results:", error);

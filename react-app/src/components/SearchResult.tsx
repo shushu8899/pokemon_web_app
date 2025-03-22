@@ -8,8 +8,10 @@ interface SearchResult {
   CardName?: string;
   CardQuality?: string;
   Username?: string;
-  CurrentRating?: string;
   Email?: string;
+  UserID?: string;
+  NumberOfRating?: number;
+  CurrentRating?: number;
   AuctionID?: string;
   ImageURL?: string;
 }
@@ -128,8 +130,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed 
                 );
               } else if (tableName.toLowerCase().includes('profile') || tableName.toLowerCase().includes('user')) {
                 return (
-                  <Link key={result.id} to={`/profile/${result.Username || result.id}`}>
-                    {content}
+                  <Link key={result.id} to={`/profile/${result.Username}`} className="block">
+                    <div className="p-4 rounded-lg shadow-lg bg-yellow-300 hover:bg-yellow-400 transition-colors">
+                      <h3 className="text-xl font-semibold mb-2">{result.Username}</h3>
+                      <p><strong>Rating:</strong> {result.CurrentRating || 0} ({result.NumberOfRating || 0} ratings)</p>
+                    </div>
                   </Link>
                 );
               } else {
