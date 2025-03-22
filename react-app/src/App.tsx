@@ -9,13 +9,14 @@ import { clearAuthTokens, getUserEmail, isAuthenticated } from './services/auth-
 // Components
 import Header from "./components/Header";
 import AuctionList from "./components/list-grp";
-import ChatAssistant from "./components/ChatAssistant"; 
-import BiddingPage from "./components/auction-details";
+import ChatAssistant from "./components/ChatAssistant";
+import BidDetails from "./components/bid-details";
 import SearchPage from "./components/SearchPage";
 import UploadCard from "./components/verify-card";
 import AuctionCreation from "./components/AuctionCreation";
 import MyCards from "./components/MyCards";
 import MyAuctions from "./components/MyAuctions";
+import WinningAuctionsPage from "./components/WinningAuctionsPage";
 import AuctionDetails from './components/AuctionDetails';
 import LoginPage from "./components/LoginPage";
 import RegistrationPage from "./components/RegistrationPage";
@@ -99,10 +100,11 @@ function App() {
           <Route path="/my-cards" element={<ProtectedRoute><MyCards /></ProtectedRoute>} />
           <Route path="/entry/card-entry/update" element={<ProtectedRoute><EditCard /></ProtectedRoute>} />
           <Route path="/my-auctions" element={<ProtectedRoute><MyAuctions /></ProtectedRoute>} />
+          <Route path="/winning-auctions" element={<ProtectedRoute><WinningAuctionsPage /></ProtectedRoute>} />
           <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
           <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/bidding/:auctionID" element={<ProtectedRoute><BiddingPage/></ProtectedRoute>} />
+          <Route path="/bid-details/:auctionID" element={<ProtectedRoute><BidDetails /></ProtectedRoute>} />
           
           {/* Catch-all redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />

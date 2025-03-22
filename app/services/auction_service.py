@@ -38,7 +38,6 @@ class AuctionService:
                 Auction.Status,
                 Auction.EndTime,
                 Auction.HighestBid,
-                Auction.EndTime,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
@@ -51,7 +50,7 @@ class AuctionService:
             .limit(page_size)
             .all()
         )
-        return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
+        return [dict(zip(["AuctionID", "CardID", "Status", "EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
 
     def update_auction_status(self):

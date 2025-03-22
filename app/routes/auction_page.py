@@ -35,7 +35,7 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
         auction["EndTime"] = auction["EndTime"].timestamp()
     return {"auctions": auctions, "total_pages": int(total_pages)}
 
-@router.get("/auction-details/{auction_id}", response_model=dict)
+@router.get("/auction-details/{auction_id}", response_model=dict, dependencies=[Depends(req_user_role)])
 def display_auction_details(
     auction_id: int,
     auction_service: AuctionService = Depends(get_auction_service),
