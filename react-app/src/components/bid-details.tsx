@@ -35,15 +35,16 @@ const styles = {
         marginTop: '20px'
     },
     imageSection: {
-        flex: '1',
-        maxWidth: '500px'
+        flex: '0 0 auto',
+        width: '300px'
     },
     detailsSection: {
         flex: '1'
     },
     cardImage: {
-        width: '80%',
-        height: 'auto',
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain' as const,
         borderRadius: '10px',
         boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
     },
@@ -340,7 +341,13 @@ const BidDetails: React.FC = () => {
 
             <div style={styles.content}>
                 {/* Left side - Card Image */}
-                <div style={styles.imageSection}>
+                <div style={{
+                    ...styles.imageSection,
+                    height: '400px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
                     <img 
                         src={getImageUrl(bidDetails.ImageURL)}
                         alt={bidDetails.CardName}
@@ -491,13 +498,14 @@ const BidDetails: React.FC = () => {
             {successMessage && (
                 <div style={{ 
                     position: 'fixed', 
-                    bottom: '20px', 
+                    bottom: '80px',
                     right: '20px',
                     backgroundColor: '#4CAF50',
                     color: 'white',
                     padding: '15px 25px',
                     borderRadius: '8px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                    zIndex: 1000
                 }}>
                     {successMessage}
                 </div>

@@ -9,6 +9,8 @@ const USER_EMAIL_KEY = 'user_email';
 export const setAuthTokens = (accessToken: string, email: string) => {
     localStorage.setItem(TOKEN_KEY, accessToken);
     localStorage.setItem(USER_EMAIL_KEY, email);
+    // Set a flag to indicate the user is authenticated
+    localStorage.setItem('is_authenticated', 'true');
 };
 
 // Get the raw access token
@@ -31,6 +33,7 @@ export const getUserEmail = () => {
 export const clearAuthTokens = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_EMAIL_KEY);
+    localStorage.removeItem('is_authenticated');
 };
 
 export const login = async (username: string, password: string) => {
@@ -41,8 +44,8 @@ export const login = async (username: string, password: string) => {
         });
         
         if (response.data.access_token) {
-            // Store the token in localStorage
-            localStorage.setItem(TOKEN_KEY, response.data.access_token);
+            // Store the token and user info in localStorage
+            setAuthTokens(response.data.access_token, username);
             return response.data;
         }
         throw new Error('No access token received');
@@ -57,5 +60,7 @@ export const logout = () => {
 };
 
 export const isAuthenticated = () => {
-    return !!localStorage.getItem(TOKEN_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    const isAuth = localStorage.getItem('is_authenticated');
+    return !!(token && isAuth === 'true');
 }; 

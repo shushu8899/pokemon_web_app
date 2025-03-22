@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
 import logging
 
-from app.routes import search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating, card_entry, profile
+from app.routes import chroma, search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating, card_entry, profile
 from app.exceptions import ServiceException
 
 # Import the HTTPBearer class
@@ -71,6 +71,7 @@ app.include_router(seller_submission.router, prefix="/auction", tags=["Submissio
 app.include_router(auction_page.router, prefix="/bidding", tags=["Auction Page"])
 app.include_router(profile_rating.router, prefix="/profile", tags=["Rate the Seller"])
 app.include_router(search.router, prefix="", tags=["Search"])
+app.include_router(chroma.router, prefix="/rag", tags=["RAG"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(profile.router, tags=["Profile"])
 

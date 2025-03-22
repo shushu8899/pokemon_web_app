@@ -10,6 +10,18 @@ import { getMyAuctions } from '../services/auction-creation';
 import { MyAuction } from '../services/auction-creation';
 import { getImageUrl } from '../utils/imageUtils';
 
+// Import sprites
+import sprite1 from '../assets/sprites/hgss_female1.png';
+import sprite2 from '../assets/sprites/hgss_female2.png';
+import sprite3 from '../assets/sprites/hgss_female3.png';
+import sprite4 from '../assets/sprites/hgss_male1.png';
+import sprite5 from '../assets/sprites/hgss_male2.png';
+import sprite6 from '../assets/sprites/hgss_male3.png';
+import sprite7 from '../assets/sprites/hgss_female4.png';
+import sprite8 from '../assets/sprites/hgss_male4.png';
+
+const sprites = [sprite1, sprite2, sprite3, sprite4, sprite5, sprite6, sprite7, sprite8];
+
 interface UserProfile {
     UserID: number;
     Username: string;
@@ -59,8 +71,13 @@ const Profile: React.FC = () => {
     const [auctions, setAuctions] = useState<MyAuction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [randomSprite, setRandomSprite] = useState<string>('');
 
     useEffect(() => {
+        // Set random sprite on component mount
+        const randomIndex = Math.floor(Math.random() * sprites.length);
+        setRandomSprite(sprites[randomIndex]);
+
         const fetchData = async () => {
             try {
                 const [profileResponse, auctionsResponse] = await Promise.all([
@@ -70,14 +87,19 @@ const Profile: React.FC = () => {
                 setProfile(profileResponse.data);
                 setAuctions(auctionsResponse);
             } catch (err: any) {
-                setError(err.response?.data?.detail || 'Failed to fetch data');
+                const errorMessage = err.response?.data?.detail || err.message || 'Failed to fetch data';
+                setError(errorMessage);
+                // If it's an authentication error, redirect to login
+                if (errorMessage.includes('Authentication failed') || err.response?.status === 401) {
+                    navigate('/login');
+                }
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, []);
+    }, [navigate]);
 
     const handleViewDetails = (auctionId: number) => {
         navigate(`/auction/${auctionId}`);
@@ -116,6 +138,15 @@ const Profile: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
             {/* Profile Section */}
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 mb-8">
+                {/* Random Sprite */}
+                {randomSprite && (
+                    <img
+                        src={randomSprite}
+                        alt="Random Pokemon Sprite"
+                        className="mx-auto mb-4"
+                        style={{ maxWidth: '80px' }}
+                    />
+                )}
                 <h1 className="text-3xl font-bold mb-6 text-center">My Profile</h1>
                 
                 <div className="space-y-4">
