@@ -100,6 +100,58 @@ const styles = {
     }
 };
 
+// Add CountdownTimer component
+const CountdownTimer: React.FC<{ endTime: number }> = ({ endTime }) => {
+    const [timeLeft, setTimeLeft] = useState<string>("");
+    const [isExpired, setIsExpired] = useState(false);
+
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            const now = new Date().getTime();
+            const endTimeMs = endTime * 1000; // Convert seconds to milliseconds
+            const difference = endTimeMs - now;
+
+            if (difference <= 0) {
+                setIsExpired(true);
+                setTimeLeft("Auction Ended");
+                return;
+            }
+
+            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+            let timeString = "";
+            if (days > 0) timeString += `${days}d `;
+            if (hours > 0 || days > 0) timeString += `${hours}h `;
+            if (minutes > 0 || hours > 0 || days > 0) timeString += `${minutes}m `;
+            timeString += `${seconds}s`;
+
+            setTimeLeft(timeString);
+        };
+
+        calculateTimeLeft();
+        const timer = setInterval(calculateTimeLeft, 1000);
+
+        return () => clearInterval(timer);
+    }, [endTime]);
+
+    return (
+        <div style={{ 
+            padding: '10px',
+            borderRadius: '8px',
+            backgroundColor: isExpired ? '#dc2626' : '#FFCB05',
+            color: isExpired ? 'white' : 'black',
+            display: 'inline-block',
+            fontWeight: 'bold',
+            marginTop: '10px'
+        }}>
+            {timeLeft}
+        </div>
+    );
+};
+
 const BidDetails: React.FC = () => {
     const { auctionID } = useParams<{ auctionID: string }>();
     const navigate = useNavigate();
@@ -302,13 +354,27 @@ const BidDetails: React.FC = () => {
                         <p><strong>Current Bid:</strong> ${bidDetails.CurrentBid}</p>
                         <p><strong>Highest Bidder:</strong> {bidDetails.HighestBidderUsername || 'No bids yet'}</p>
                         <p><strong>Minimum Increment:</strong> ${bidDetails.MinimumIncrement}</p>
+                        <p><strong>End Time:</strong> {new Date(bidDetails.EndTime * 1000).toLocaleString()}</p>
+                        <p><strong>Time Remaining:</strong></p>
+                        <CountdownTimer endTime={bidDetails.EndTime} />
                     </div>
 
                     <button 
-                        style={styles.bidButton}
-                        onClick={() => setShowBidModal(true)}
+                        style={{
+                            ...styles.bidButton,
+                            opacity: new Date().getTime() > bidDetails.EndTime * 1000 ? 0.5 : 1,
+                            cursor: new Date().getTime() > bidDetails.EndTime * 1000 ? 'not-allowed' : 'pointer'
+                        }}
+                        onClick={() => {
+                            if (new Date().getTime() > bidDetails.EndTime * 1000) {
+                                setError("This auction has ended");
+                                setShowErrorModal(true);
+                                return;
+                            }
+                            setShowBidModal(true);
+                        }}
                     >
-                        Place Bid
+                        {new Date().getTime() > bidDetails.EndTime * 1000 ? 'Auction Ended' : 'Place Bid'}
                     </button>
                 </div>
             </div>
