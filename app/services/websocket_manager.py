@@ -1,21 +1,75 @@
-from typing import List, Dict
-from fastapi import WebSocket
-from app.models.profile import Profile
-from sqlalchemy.orm import Session
+# app/services/socket_manager.py
+from fastapi import WebSocket, WebSocketDisconnect
+import json
+from datetime import datetime, timezone
+from app.models.notifications import Notification
 
 class WebSocketManager:
     def __init__(self):
-        self.active_connections = {}  # Dictionary to store active connections
+        self.active_connections: dict[str, WebSocket] = {}
 
-    async def connect(self, websocket: WebSocket, user_id: str):
-        await websocket.accept()  # Accepts the WebSocket connection
-        self.active_connections[user_id] = websocket  # Stores it
+    async def connect(self, websocket: WebSocket, email: str):
+        await websocket.accept()
+        self.active_connections[email] = websocket
+        print(f"✅ Backend WebSocket connection established for {email}")
+        print(self.active_connections)
 
-    def disconnect(self, user_id: str):
-        if user_id in self.active_connections:
-            del self.active_connections[user_id]  # Removes disconnected user
+    async def disconnect(self, websocket: WebSocket):
+        email_to_remove = None
+        for email, conn in self.active_connections.items():
+            if conn == websocket:
+                email_to_remove = email
+                break
 
-    async def send_message(self, user_id: str, message: str):
-        websocket = self.active_connections.get(user_id)
+        if email_to_remove:
+            del self.active_connections[email_to_remove]
+            print(f"🔌 Disconnected WebSocket for {email_to_remove}")
+
+        try:
+            await websocket.close()
+        except Exception as e:
+            print(f"⚠️ Error closing WebSocket: {e}")
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        try:
+            await websocket.send_text(message)
+        except Exception as e:
+            print(f"⚠️ Failed to send message: {e}")
+
+    async def send_notification(self, email: str, message: dict):
+        websocket = self.active_connections.get(email)
         if websocket:
-            await websocket.send_text(message)  # Sends a message
+            try:
+                await websocket.send_text(json.dumps(message))  # ✅ one json.dumps
+                print(f"📩 Notification sent to {email}: {message}")
+            except Exception as e:
+                print(f"⚠️ Error sending notification to {email}: {e}")
+        else:
+            print(f"⚠️ No active connection for {email}")
+
+    async def create_and_send_notification(self, db, receiver_id, email, message, auction_id=None):
+        """
+        Create a notification and send it via WebSocket.
+        """
+        notification = Notification(
+            ReceiverID=receiver_id,
+            AuctionID=auction_id,
+            Message=message,
+            IsRead=False
+        )
+        db.add(notification)
+        db.commit()
+        db.refresh(notification)
+
+        self.send_notification(
+            email,
+            {
+                "notification_id": notification.NotificationID,
+                "auction_id": auction_id,
+                "message": notification.Message,
+                "sent_date": notification.TimeSent.isoformat(),
+                "is_read": False
+            }
+        )
+
+websocket_manager = WebSocketManager()

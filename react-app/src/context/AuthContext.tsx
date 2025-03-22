@@ -42,12 +42,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthTokens(accessToken, email);
     setIsAuthenticated(true);
     setUser({ email });
+    // Optionally store the token in sessionStorage/localStorage for direct access later
+    sessionStorage.setItem('access_token', accessToken);  // or localStorage, based on your needs
   };
 
   const logout = () => {
     clearAuthTokens();
     setIsAuthenticated(false);
     setUser(null);
+    // Clear token from storage on logout
+    sessionStorage.removeItem('access_token');
   };
 
   return (

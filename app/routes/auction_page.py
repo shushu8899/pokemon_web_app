@@ -17,7 +17,8 @@ from jose import jwt
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 import os
-
+from app.models.profile import Profile
+from app.dependencies.auth import req_user_or_admin
 from app.db.db import get_db
 from app.routes.auth import cognito_service
 from app.dependencies.auth import req_user_role, req_admin_role
@@ -97,11 +98,11 @@ def get_winning_auctions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/notifications/{auction_id}")
-async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
-    notifications = db.query(Notification).filter(Notification.AuctionID == auction_id).all()
-    result = [{"auction_id": n.AuctionID, "message": n.Message, "timestamp": n.TimeSent.isoformat()} for n in notifications]
-    return JSONResponse(content=result)
+# @router.get("/notifications/{auction_id}")
+# async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
+#     notifications = db.query(Notification).filter(Notification.AuctionID == auction_id).all()
+#     result = [{"auction_id": n.AuctionID, "message": n.Message, "timestamp": n.TimeSent.isoformat()} for n in notifications]
+#     return JSONResponse(content=result)
 
 @router.post("/cleanup_auctions", dependencies=[Depends(req_admin_role)])
 def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db), auth_info: dict = Depends(get_current_user)):
