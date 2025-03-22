@@ -6,6 +6,17 @@ import surprisedPikachu from "../assets/surprisedPikachu.png";
 import axios from 'axios';
 import { getImageUrl } from '../utils/imageUtils';
 import { FaChevronLeft, FaChevronRight, FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+// Import sprites
+import sprite1 from '../assets/sprites/hgss_female1.png';
+import sprite2 from '../assets/sprites/hgss_female2.png';
+import sprite3 from '../assets/sprites/hgss_female3.png';
+import sprite4 from '../assets/sprites/hgss_male1.png';
+import sprite5 from '../assets/sprites/hgss_male2.png';
+import sprite6 from '../assets/sprites/hgss_male3.png';
+import sprite7 from '../assets/sprites/hgss_female4.png';
+import sprite8 from '../assets/sprites/hgss_male4.png';
+
+const sprites = [sprite1, sprite2, sprite3, sprite4, sprite5, sprite6, sprite7, sprite8];
 
 interface CardAuction {
   result_type: string;
@@ -410,7 +421,15 @@ const SearchPage: React.FC = () => {
   const renderProfileCard = (profile: Profile, index: number) => (
     <Link to={`/profile/${profile.Username}`} key={`profile-${index}`} className="block transform transition-transform duration-300 hover:scale-105">
       <div className="p-6 rounded-lg shadow-lg bg-[#fbeda5] hover:bg-yellow-400 transition-colors h-full">
-        <h3 className="text-xl font-semibold mb-4">{profile.Username}</h3>
+        {/* Add sprite image above username */}
+        <div className="flex justify-center mb-4">
+          <img 
+            src={sprites[Math.floor(Math.random() * sprites.length)]} 
+            alt="Trainer sprite" 
+            className="w-16 h-16 object-contain"
+          />
+        </div>
+        <h3 className="text-xl font-semibold mb-4 text-center">{profile.Username}</h3>
         <RatingStars 
           rating={profile.CurrentRating || 0} 
           count={profile.NumberOfRating || 0} 

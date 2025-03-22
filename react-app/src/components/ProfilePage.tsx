@@ -5,6 +5,17 @@ import pokemonSpinner from "../assets/pokeballloading.gif";
 import surprisedPikachu from "../assets/surprisedPikachu.png";
 import { getImageUrl } from '../utils/imageUtils';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+// Import sprites
+import sprite1 from '../assets/sprites/hgss_female1.png';
+import sprite2 from '../assets/sprites/hgss_female2.png';
+import sprite3 from '../assets/sprites/hgss_female3.png';
+import sprite4 from '../assets/sprites/hgss_male1.png';
+import sprite5 from '../assets/sprites/hgss_male2.png';
+import sprite6 from '../assets/sprites/hgss_male3.png';
+import sprite7 from '../assets/sprites/hgss_female4.png';
+import sprite8 from '../assets/sprites/hgss_male4.png';
+
+const sprites = [sprite1, sprite2, sprite3, sprite4, sprite5, sprite6, sprite7, sprite8];
 
 interface UserProfile {
   Username: string;
@@ -312,7 +323,16 @@ const ProfilePage: React.FC = () => {
         {/* Profile Header - Vertical box on left */}
         <div className="md:w-1/4">
           <div className="bg-white rounded-lg p-6 shadow-lg sticky top-4 h-auto min-h-[300px]">
-            <h1 className="font-bold mb-6 pb-2 border-b-2 border-yellow-400"
+            {/* Add sprite image above username */}
+            <div className="flex justify-center mb-4">
+              <img 
+                src={sprites[Math.floor(Math.random() * sprites.length)]} 
+                alt="Trainer sprite" 
+                className="w-24 h-24 object-contain"
+              />
+            </div>
+            
+            <h1 className="font-bold mb-6 pb-2 border-b-2 border-yellow-400 text-center"
                 style={{
                     fontSize: '15px',
                     fontWeight: 'bold',
