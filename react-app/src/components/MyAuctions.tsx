@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMyAuctions } from '../services/auction-creation';
 import { MyAuction } from '../services/auction-creation';
 import pokemonSpinner from "../assets/pokeballloading.gif";
+import { getImageUrl } from '../utils/imageUtils';
 
 const getStatusStyle = (status: string) => {
   switch (status) {
@@ -91,9 +92,7 @@ const MyAuctions: React.FC = () => {
               <div className="aspect-w-3 aspect-h-4 mb-4 mt-10">
                 {auction.ImageURL && (
                   <img
-                    src={auction.ImageURL.startsWith('http') 
-                      ? auction.ImageURL 
-                      : `http://127.0.0.1:8000${auction.ImageURL}`}
+                    src={getImageUrl(auction.ImageURL)}
                     alt={auction.CardName}
                     className="w-full h-64 object-contain rounded-lg"
                   />

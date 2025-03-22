@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import styles from './WinningAuctionsPage.module.css';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface WinningAuction {
   AuctionID: number;
@@ -67,9 +68,9 @@ const WinningAuctionsPage: React.FC = () => {
           {winningAuctions.map((auction) => (
             <div key={auction.AuctionID} className={styles.auctionCard}>
               <img 
-                src={auction.ImageURL} 
-                alt={auction.CardName} 
-                className={styles.cardImage}
+                src={getImageUrl(auction.ImageURL)}
+                alt={auction.CardName}
+                className="w-full h-64 object-contain rounded-lg"
               />
               <div className={styles.auctionInfo}>
                 <h3 className={styles.cardName}>{auction.CardName}</h3>

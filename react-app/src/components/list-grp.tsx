@@ -4,6 +4,7 @@ import axios from "axios";
 import FloatingPokemon from "./FloatingPokemon";
 import { calculateTimeLeft } from "../utils/timeUtils.tsx"; // ✅ Import the function
 import bannerImage from "../assets/Pokemon Card Banner.png";
+import { getImageUrl } from '../utils/imageUtils';
 
 // Define the Auction type based on FastAPI response
 interface Auction {
@@ -107,13 +108,9 @@ const AuctionList: React.FC = () => {
                     {/* Card Image */}
                     <div className="aspect-w-3 aspect-h-4 mb-4">
                       <img
-                        src={auction.ImageURL.startsWith('http') ? auction.ImageURL : `http://127.0.0.1:8000${auction.ImageURL}`}
+                        src={getImageUrl(auction.ImageURL)}
                         alt={auction.CardName}
                         className="w-full h-64 object-contain rounded-lg"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "https://via.placeholder.com/300x400?text=No+Image";
-                        }}
                       />
                     </div>
 

@@ -7,6 +7,7 @@ import {
   AuctionFormData,
 } from '../services/auction-creation';
 import pikachuPattern from '../assets/pikachu_pattern.png';
+import { getImageUrl } from '../utils/imageUtils';
 
 const AuctionCreation: React.FC = () => {
   const navigate = useNavigate();
@@ -182,12 +183,10 @@ const AuctionCreation: React.FC = () => {
 
               {selectedCardDetails && (
                 <div className="mt-4">
-                  <img
-                    src={selectedCardDetails.ImageURL.startsWith('http') 
-                      ? selectedCardDetails.ImageURL 
-                      : `http://127.0.0.1:8000${selectedCardDetails.ImageURL}`}
+                  <img 
+                    src={getImageUrl(selectedCardDetails.ImageURL)}
                     alt={selectedCardDetails.CardName}
-                    className="w-full rounded-lg shadow-md mb-2"
+                    className="w-full h-64 object-contain rounded-lg"
                   />
                   <h3 className="font-semibold">{selectedCardDetails.CardName}</h3>
                   <p className="text-sm text-gray-600">Quality: {selectedCardDetails.CardQuality}</p>

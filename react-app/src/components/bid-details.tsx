@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { getAuthorizationHeader } from '../services/auth-service';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface BidDetails {
     AuctionID: number;
@@ -105,6 +107,7 @@ const BidDetails: React.FC = () => {
     const [showBidModal, setShowBidModal] = useState(false);
     const [bidAmount, setBidAmount] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
+    const [showErrorModal, setShowErrorModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -115,97 +118,152 @@ const BidDetails: React.FC = () => {
     const fetchBidDetails = async () => {
         try {
             setIsLoading(true);
-            const token = localStorage.getItem("authToken");
-            if (!token) {
+            const authHeader = getAuthorizationHeader();
+            console.log("Token retrieved:", authHeader ? "Token exists" : "No token found");
+            
+            if (!authHeader) {
                 setError("Please log in to view bid details");
+                setShowErrorModal(true);
+                navigate('/login');
                 return;
             }
 
-            // Get auction details using the correct endpoint
+            // Get auction details using the general endpoint that any logged-in user can access
+            console.log("Making request to:", `http://127.0.0.1:8000/bidding/auction-details/${auctionID}`);
             const auctionResponse = await axios.get(
-                `http://127.0.0.1:8000/auction-details/${auctionID}`,
-                { headers: { Authorization: `Bearer ${token}` } }
+                `http://127.0.0.1:8000/bidding/auction-details/${auctionID}`,
+                { 
+                    headers: { 
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json'
+                    } 
+                }
             );
 
-            // Get seller's username
-            const sellerResponse = await axios.get(
-                `http://127.0.0.1:8000/profiles/${auctionResponse.data.SellerID}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            console.log("Auction response received:", auctionResponse.data);
+            console.log("Image URL:", auctionResponse.data.ImageURL);
 
-            // Get highest bidder's username if exists
-            let highestBidderUsername = null;
-            if (auctionResponse.data.HighestBidderID) {
-                const bidderResponse = await axios.get(
-                    `http://127.0.0.1:8000/profiles/${auctionResponse.data.HighestBidderID}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                highestBidderUsername = bidderResponse.data.Username;
-            }
-
-            // Combine all the data
+            // The response now includes SellerUsername and HighestBidderUsername
             const bidDetails: BidDetails = {
                 ...auctionResponse.data,
-                SellerUsername: sellerResponse.data.Username,
-                HighestBidderUsername: highestBidderUsername,
                 CurrentBid: auctionResponse.data.HighestBid || 0
             };
+
+            console.log("Final bid details:", bidDetails);
 
             setBidDetails(bidDetails);
         } catch (error) {
             console.error("Error fetching bid details:", error);
             if (axios.isAxiosError(error)) {
+                console.error("Error response:", error.response?.data);
                 if (error.response?.status === 404) {
                     setError("Auction not found");
+                } else if (error.response?.status === 401) {
+                    setError("Your session has expired. Please log in again.");
+                    navigate('/login');
                 } else {
                     setError(error.response?.data?.detail || "Failed to load bid details");
                 }
             } else {
                 setError("An unexpected error occurred");
             }
+            setShowErrorModal(true);
         } finally {
             setIsLoading(false);
         }
     };
 
     const handlePlaceBid = async () => {
-        if (!bidDetails || !bidAmount) return;
+        if (!bidDetails || !bidAmount) {
+            setError("Please enter a bid amount");
+            setShowErrorModal(true);
+            return;
+        }
 
         const bidValue = parseFloat(bidAmount);
-        if (isNaN(bidValue) || bidValue <= bidDetails.CurrentBid) {
-            setError("Bid must be higher than the current bid");
+        if (isNaN(bidValue)) {
+            setError("Please enter a valid number");
+            setShowErrorModal(true);
+            return;
+        }
+
+        if (bidValue <= bidDetails.CurrentBid) {
+            setError(`Bid must be higher than the current bid of $${bidDetails.CurrentBid}`);
+            setShowErrorModal(true);
+            return;
+        }
+
+        if (bidValue < bidDetails.CurrentBid + bidDetails.MinimumIncrement) {
+            setError(`Bid must be at least $${bidDetails.MinimumIncrement} higher than the current bid`);
+            setShowErrorModal(true);
             return;
         }
 
         try {
-            const token = localStorage.getItem("authToken");
-            if (!token) {
+            const authHeader = getAuthorizationHeader();
+            if (!authHeader) {
                 setError("Please log in to place a bid");
+                setShowErrorModal(true);
                 return;
             }
 
+            console.log("Sending bid request with amount:", bidValue);
             const response = await axios.post(
                 `http://127.0.0.1:8000/bidding/place-bid/${auctionID}`,
-                { bid_value: bidValue },
-                { headers: { Authorization: `Bearer ${token}` } }
+                bidValue,
+                { 
+                    headers: { 
+                        'Authorization': authHeader,
+                        'Content-Type': 'application/json'
+                    } 
+                }
             );
 
+            console.log("Bid response:", response.data);
             setSuccessMessage("Bid placed successfully!");
             setShowBidModal(false);
             setBidAmount("");
             fetchBidDetails(); // Refresh the details
         } catch (error) {
             console.error("Error placing bid:", error);
-            setError("Failed to place bid");
+            if (axios.isAxiosError(error)) {
+                // Handle validation errors (422)
+                if (error.response?.status === 422) {
+                    const errorDetail = error.response.data.detail;
+                    console.log("Validation error details:", errorDetail);
+                    
+                    // Handle different types of validation errors
+                    if (Array.isArray(errorDetail)) {
+                        // Handle array of validation errors
+                        const firstError = errorDetail[0];
+                        if (typeof firstError === 'object' && 'msg' in firstError) {
+                            setError(firstError.msg);
+                        } else if (typeof firstError === 'string') {
+                            setError(firstError);
+                        } else {
+                            setError("Invalid bid amount");
+                        }
+                    } else if (typeof errorDetail === 'object' && 'msg' in errorDetail) {
+                        // Handle object validation error
+                        setError(errorDetail.msg);
+                    } else if (typeof errorDetail === 'string') {
+                        // Handle string validation error
+                        setError(errorDetail);
+                    } else {
+                        setError("Invalid bid amount");
+                    }
+                } else {
+                    setError(error.response?.data?.detail || "Failed to place bid");
+                }
+            } else {
+                setError("An unexpected error occurred");
+            }
+            setShowErrorModal(true);
         }
     };
 
     if (isLoading) {
         return <div style={styles.container}>Loading...</div>;
-    }
-
-    if (error) {
-        return <div style={styles.container}>{error}</div>;
     }
 
     if (!bidDetails) {
@@ -222,9 +280,13 @@ const BidDetails: React.FC = () => {
                 {/* Left side - Card Image */}
                 <div style={styles.imageSection}>
                     <img 
-                        src={bidDetails.ImageURL} 
+                        src={getImageUrl(bidDetails.ImageURL)}
                         alt={bidDetails.CardName}
                         style={styles.cardImage}
+                        onError={(e) => {
+                            console.error("Image failed to load:", bidDetails.ImageURL);
+                            e.currentTarget.src = "https://placehold.co/300x400/png?text=No+Image+Available";
+                        }}
                     />
                 </div>
 
@@ -266,6 +328,7 @@ const BidDetails: React.FC = () => {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.8, opacity: 0 }}
                             style={styles.modal}
+                            onClick={(e) => e.stopPropagation()}
                         >
                             <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
                                 Place Your Bid
@@ -281,14 +344,55 @@ const BidDetails: React.FC = () => {
                                 onChange={(e) => setBidAmount(e.target.value)}
                                 style={styles.input}
                             />
-
-                            {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
                             
                             <button
                                 style={styles.submitButton}
                                 onClick={handlePlaceBid}
                             >
                                 Submit Bid
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Error Modal */}
+            <AnimatePresence>
+                {showErrorModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={styles.overlay}
+                        onClick={() => setShowErrorModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            style={styles.modal}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#dc2626' }}>
+                                Error
+                            </h3>
+                            
+                            <p style={{ marginBottom: '20px' }}>{error}</p>
+                            
+                            <button
+                                style={{
+                                    ...styles.submitButton,
+                                    backgroundColor: '#dc2626',
+                                    color: 'white'
+                                }}
+                                onClick={() => {
+                                    setShowErrorModal(false);
+                                    if (error?.includes("Please log in")) {
+                                        navigate('/login');
+                                    }
+                                }}
+                            >
+                                Close
                             </button>
                         </motion.div>
                     </motion.div>
