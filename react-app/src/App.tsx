@@ -104,8 +104,8 @@ function App() {
           <Route path="/winning-auctions" element={<ProtectedRoute><WinningAuctionsPage /></ProtectedRoute>} />
           <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
           <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
-          <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/profile/:username" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/bid-details/:auctionID" element={<ProtectedRoute><BidDetails /></ProtectedRoute>} />
           
           {/* Catch-all redirect to home */}

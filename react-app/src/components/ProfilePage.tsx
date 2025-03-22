@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import pokemonSpinner from "../assets/pokeballloading.gif";
+import surprisedPikachu from "../assets/surprisedPikachu.png";
 
-interface ProfileInfo {
-  UserID: string;
+interface UserProfile {
   Username: string;
   Email: string;
-  NumberOfRating: number;
   CurrentRating: number;
+  NumberOfRating: number;
+  UserID: string;
 }
 
 interface UserAuction {
@@ -22,7 +23,7 @@ interface UserAuction {
 
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
-  const [profile, setProfile] = useState<ProfileInfo | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [auctions, setAuctions] = useState<UserAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,28 +32,46 @@ const ProfilePage: React.FC = () => {
     const fetchProfileData = async () => {
       try {
         setLoading(true);
-        // First get the user's profile info from the search endpoint
-        const searchResponse = await axios.get(`http://127.0.0.1:8000/search/profiles?search_query=${username}`);
-        console.log('Search response:', searchResponse.data);
+        console.log(`Fetching profile for username: ${username}`);
         
-        // Find the matching profile
-        const userProfile = searchResponse.data.find((profile: any) => 
-          profile.Username.toLowerCase() === username?.toLowerCase()
-        );
-
-        if (!userProfile) {
-          throw new Error('Profile not found');
+        // First get the profile info
+        const profileResponse = await axios.get<UserProfile>(`http://127.0.0.1:8000/profile/${username}`);
+        console.log('Profile data:', profileResponse.data);
+        setProfile(profileResponse.data);
+        
+        // Fetch auctions for this user using the updated search_auctions endpoint
+        try {
+          // Get the user's ID from the profile response
+          const userId = profileResponse.data.UserID;
+          
+          // Call the search_auctions endpoint - still using Auction_search parameter
+          // but now the service treats it as a user ID
+          const auctionsResponse = await axios.get(`http://127.0.0.1:8000/search/auctions?Auction_search=${userId}`);
+          console.log('User auctions:', auctionsResponse.data);
+          
+          if (auctionsResponse.data && Array.isArray(auctionsResponse.data)) {
+            setAuctions(auctionsResponse.data);
+          } else if (auctionsResponse.data.auctions && Array.isArray(auctionsResponse.data.auctions)) {
+            setAuctions(auctionsResponse.data.auctions);
+          } else {
+            console.error('Unexpected auction response format:', auctionsResponse.data);
+            setAuctions([]);
+          }
+        } catch (auctionErr: any) {
+          console.error('Error fetching auctions:', auctionErr);
+          if (auctionErr.response) {
+            console.error('Auction error response:', auctionErr.response.data);
+            console.error('Auction error status:', auctionErr.response.status);
+          }
+          // Still show the profile even if auctions fail to load
         }
-
-        setProfile(userProfile);
-
-        // Now fetch their auctions using their UserID
-        const auctionsResponse = await axios.get(`http://127.0.0.1:8000/auction/seller/${userProfile.UserID}`);
-        setAuctions(auctionsResponse.data);
-        
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching profile:', err);
-        setError('Failed to load profile data');
+        setError(`Failed to load profile data: ${err.message}`);
+        if (err.response) {
+          console.error('Response data:', err.response.data);
+          console.error('Response status:', err.response.status);
+        }
       } finally {
         setLoading(false);
       }
@@ -91,7 +110,8 @@ const ProfilePage: React.FC = () => {
           <div>
             <p className="text-lg"><strong>Email:</strong> {profile.Email}</p>
             <p className="text-lg">
-              <strong>Rating:</strong> {profile.CurrentRating} ({profile.NumberOfRating} ratings)
+              <strong>Rating:</strong> {profile.CurrentRating} 
+              ({profile.NumberOfRating} ratings)
             </p>
           </div>
           <div>
@@ -101,8 +121,8 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Active Auctions */}
-      <h2 className="text-2xl font-bold mb-6">Active Auctions</h2>
+      {/* User's Auctions */}
+      <h2 className="text-2xl font-bold mb-6">Auctions</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {auctions.map(auction => (
           <div key={auction.AuctionID} className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -114,6 +134,10 @@ const ProfilePage: React.FC = () => {
                     : `http://127.0.0.1:8000${auction.ImageURL}`}
                   alt={auction.CardName}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error(`Failed to load image: ${auction.ImageURL}`);
+                    e.currentTarget.src = surprisedPikachu;
+                  }}
                 />
               </div>
             )}
@@ -124,13 +148,13 @@ const ProfilePage: React.FC = () => {
                 <p className="text-gray-600"><strong>Current Bid:</strong> ${auction.HighestBid}</p>
               )}
               <p className="text-gray-600">
-                <strong>Ends:</strong> {new Date(auction.EndTime).toLocaleString()}
+                <strong>Ends:</strong> {new Date(Number(auction.EndTime) * 1000).toLocaleString()}
               </p>
             </div>
           </div>
         ))}
         {auctions.length === 0 && (
-          <p className="col-span-full text-center text-gray-500">No active auctions found.</p>
+          <p className="col-span-full text-center text-gray-500">No auctions found for this user.</p>
         )}
       </div>
     </div>
