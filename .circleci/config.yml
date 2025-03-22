@@ -50,6 +50,11 @@ jobs:
           command: |
             . venv/bin/activate
             python3 tests/seed_data.py 
+      - run:
+          name: Integration Tests - Auction
+          command: |
+            . venv/bin/activate
+            python3 tests/dummy_route_calls.py 
 
   deploy:
     docker:
