@@ -10,17 +10,65 @@ from app.dependencies.auth import req_user_or_admin
 from app.services.profile_service import get_current_user
 from typing import List
 from app.models.auction import Auction
+from pydantic import BaseModel
+import boto3    
+import dotenv
+from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 router = APIRouter()
 
-UPLOAD_DIR = "static/uploads/"
-os.makedirs(UPLOAD_DIR, exist_ok=True)  # Ensure upload directory exists
+load_dotenv()
+print("aws_access:", os.getenv("AWS__S3_ACCESS_KEY_ID"))
+print("aws_secret:", os.getenv("AWS_S3_SECRET_ACCESS_KEY"))
+
+AWS_REGION = "ap-southeast-1"
+BUCKET_NAME = "pokemonimagestorage"
+class S3UploadService:
+    def __init__(self):
+        self.access = os.getenv("AWS__S3_ACCESS_KEY_ID")
+        self.aws_secret = os.getenv("AWS_S3_SECRET_ACCESS_KEY")
+
+        # Initialize Boto3 Cognito client
+        self.client =boto3.client('s3', aws_access_key_id=self.access, aws_secret_access_key=self.aws_secret,region_name=AWS_REGION)
+class UploadRequest(BaseModel):
+    filename: str
+
+
+s3 = S3UploadService()
+
+
+@router.post("/generate-presigned-url", dependencies=[Depends(req_user_or_admin)])
+def generate_presigned_url(request: UploadRequest,db: Session = Depends(get_db),auth_info: dict = Depends(get_current_user)):
+    cognito_user_id = auth_info.get("sub")
+    # Retrieve the user_id from the profiles table based on the cognito_user_id
+    user_profile = db.query(Profile).filter(Profile.CognitoUserID == cognito_user_id).first()
+    if not user_profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+    # Store file inside user-specific folder
+    unique_filename = f"{uuid.uuid4()}_{request.filename}"
+    object_key = f"images/{unique_filename}"
+
+    # Generate pre-signed URL (valid for 1 hour)
+    try:
+        presigned_url = s3.client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": BUCKET_NAME, "Key": object_key, "ContentType": "image/jpeg"},
+            ExpiresIn=3600
+        )
+    except Exception as e:
+            print(f"Error generating pre-signed URL: {e}")
+            raise HTTPException(status_code=500, detail="Error generating pre-signed URL")
+
+
+    return {"upload_url": presigned_url, "s3_url": f"https://{BUCKET_NAME}.s3.ap-southeast-1.amazonaws.com/{object_key}"}
+
 
 @router.post("/card-entry/create", dependencies=[Depends(req_user_or_admin)])
 async def create_card_entry(
     card_name: str = Form(...),
     card_quality: str = Form(...),
-    image: UploadFile = File(...),
+    image_url: str = Form(...), 
     db: Session = Depends(get_db),
     auth_info: dict = Depends(get_current_user)
 ):
@@ -40,17 +88,7 @@ async def create_card_entry(
     existing_card = db.query(Card).filter(Card.CardName.ilike(card_name), Card.OwnerID == owner_id).first()
     if existing_card:
         raise HTTPException(status_code=400, detail="Card already exists for this user")
-
-    # Generate a unique filename for the image
-    unique_filename = f"{uuid.uuid4()}_{image.filename}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
     
-    # Save Image to Upload Directory
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
-
-    image_url = f"/static/uploads/{unique_filename}"
-
     # Create a new card entry
     new_card = Card(
         OwnerID=owner_id,
@@ -101,22 +139,29 @@ async def update_card_entry(
     if image:
         # Generate a unique filename for the image
         unique_filename = f"{uuid.uuid4()}_{image.filename}"
-        file_path = os.path.join(UPLOAD_DIR, unique_filename)
-        
-        # Save Image to Upload Directory
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
+        object_key = f"images/{unique_filename}"
+
+        # Generate pre-signed URL (valid for 1 hour)
+        presigned_url = s3.client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": BUCKET_NAME, "Key": object_key, "ContentType": "image/jpeg"},
+            ExpiresIn=3600
+        )
+
+        # Store the public S3 URL
+        s3_url = f"https://{BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{object_key}"
 
         # Delete old image if it exists
-        if existing_card.ImageURL and existing_card.ImageURL.startswith("/static/uploads/"):
-            old_image_path = os.path.join("static", "uploads", os.path.basename(existing_card.ImageURL))
-            try:
-                if os.path.exists(old_image_path):
-                    os.remove(old_image_path)
-            except Exception as e:
-                print(f"Error deleting old image file: {e}")
+        if existing_card.ImageURL:
+            parsed_url = urlparse(existing_card.ImageURL)
+            object_key = parsed_url.path.lstrip("/")  
 
-        existing_card.ImageURL = f"/static/uploads/{unique_filename}"
+            try:
+                s3.client.delete_object(Bucket=BUCKET_NAME, Key=object_key)
+            except Exception as e:
+                print(f"Failed to delete old image: {e}")
+
+                existing_card.ImageURL = s3_url
 
     # Update the card details
     existing_card.CardName = card_name
@@ -129,7 +174,7 @@ async def update_card_entry(
         "message": "Card updated successfully",
         "card_id": existing_card.CardID,
         "updated_image_url": existing_card.ImageURL,
-        "is_validated": existing_card.IsValidated
+        "is_validated": existing_card.IsValidated,
     }
 
 @router.get("/my-cards", dependencies=[Depends(req_user_or_admin)])
