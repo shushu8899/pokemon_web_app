@@ -174,7 +174,7 @@ const Profile: React.FC = () => {
                                     ) : (
                                         <>
                                             <p className="text-gray-600">Starting Bid: ${auction.StartingBid}</p>
-                                            <p className="text-gray-600">Current Bid: $0</p>
+                                            <p className="text-gray-600">Current Bid: None</p>
                                         </>
                                     )}
                                     <p className="text-gray-600">Ends: {new Date(auction.EndTime).toLocaleDateString()}</p>

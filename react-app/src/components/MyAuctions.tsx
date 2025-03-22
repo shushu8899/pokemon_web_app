@@ -104,7 +104,7 @@ const MyAuctions: React.FC = () => {
                 <h3 className="text-xl font-semibold mb-2">{auction.CardName}</h3>
                 <p className="text-gray-600">Quality: {auction.CardQuality}</p>
                 <p className="text-gray-600">
-                  Current Bid: ${auction.HighestBidderID ? auction.HighestBid : '0'}
+                  Current Bid: {auction.HighestBidderID ? `$${auction.HighestBid}` : 'None'}
                 </p>
                 {!auction.HighestBidderID && (
                   <p className="text-gray-600">Starting Bid: ${auction.HighestBid}</p>
