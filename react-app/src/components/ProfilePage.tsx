@@ -14,8 +14,11 @@ import sprite5 from '../assets/sprites/hgss_male2.png';
 import sprite6 from '../assets/sprites/hgss_male3.png';
 import sprite7 from '../assets/sprites/hgss_female4.png';
 import sprite8 from '../assets/sprites/hgss_male4.png';
+import sprite9 from '../assets/sprites/hgss_female5.png';
+import sprite10 from '../assets/sprites/hgss_male5.png';
+import sprite11 from '../assets/sprites/hgss_kid1.png';
 
-const sprites = [sprite1, sprite2, sprite3, sprite4, sprite5, sprite6, sprite7, sprite8];
+const sprites = [sprite1, sprite2, sprite3, sprite4, sprite5, sprite6, sprite7, sprite8, sprite9, sprite10, sprite11];
 
 interface UserProfile {
   Username: string;

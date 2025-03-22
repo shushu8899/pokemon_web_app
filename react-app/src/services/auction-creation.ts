@@ -170,7 +170,7 @@ export const getAuctionDetails = async (auctionId: number): Promise<MyAuction> =
     console.log('Fetching auction details for ID:', auctionId);
     
     // Use the seller-specific endpoint for viewing our own auction details
-    const response = await api.get<MyAuction>(`/auction/my-auction-details/${auctionId}`);
+    const response = await api.get<MyAuction>(`/auction/auction-details/${auctionId}`);
     
     console.log('Auction details response:', response.data);
     return response.data;
