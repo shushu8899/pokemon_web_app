@@ -2,11 +2,19 @@ import React, { useState } from "react";
 import axios from "axios";
 import pokemonSpinner from "../assets/pokeballloading.gif";
 import { getAuthorizationHeader } from "../services/auth-service";
+import { API_BASE_URL } from '../config';
+import { useNavigate } from "react-router-dom";
 
 interface UploadResponse {
   message: string;
   card_id: number;
   image_url: string;
+}
+
+interface VerificationResult {
+    success: boolean;
+    message: string;
+    details: any;
 }
 
 const UploadCard: React.FC = () => {
@@ -17,7 +25,9 @@ const UploadCard: React.FC = () => {
   const [cardName, setCardName] = useState<string>("");
   const [cardQuality, setCardQuality] = useState<string>("MINT");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [verificationResult, setVerificationResult] = useState<UploadResponse | null>(null);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const navigate = useNavigate();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -42,11 +52,14 @@ const UploadCard: React.FC = () => {
     setIsLoading(true);
     setError("");
     setVerificationResult(null);
+    setSuccessMessage(null);
 
     const formData = new FormData();
     if (selectedFile) {
       formData.append("file", selectedFile);
     }
+    formData.append("card_name", cardName);
+    formData.append("card_quality", cardQuality);
 
     try {
       const authHeader = getAuthorizationHeader();
@@ -54,8 +67,10 @@ const UploadCard: React.FC = () => {
         throw new Error('You must be logged in to verify cards');
       }
 
+      // Step 1: Upload and verify the card
+      console.log('Sending verification request...');
       const response = await axios.post<UploadResponse>(
-        "http://127.0.0.1:8000/verify-card",
+        `${API_BASE_URL}/entry/card-entry/unvalidated`,
         formData,
         {
           headers: {
@@ -65,11 +80,50 @@ const UploadCard: React.FC = () => {
         }
       );
 
-      setVerificationResult(response.data);
+      console.log('Upload response:', response.data);
+      const cardId = response.data.card_id;
+
+      // Step 2: Verify the card
+      const verifyResponse = await axios.post(
+        `${API_BASE_URL}/verification/verify-card/${cardId}`,
+        {},
+        {
+          headers: {
+            'Authorization': authHeader,
+          },
+        }
+      );
+
+      console.log('Verification response:', verifyResponse.data);
+
+      // Check if the card is validated based on the is_validated flag
+      if (verifyResponse.data.is_validated) {
+        // For authenticated cards, redirect to My Cards page
+        setIsLoading(false);
+        setShowResults(false);
+        setVerificationResult(null);
+        navigate('/my-cards');
+      } else {
+        // For fake cards, show the modal
+        setVerificationResult({
+          success: false,
+          message: verifyResponse.data.message || "Card verification failed",
+          details: { card_id: cardId }
+        });
+        setShowResults(true);
+        setIsLoading(false);
+      }
+
     } catch (error: any) {
       console.error("Error verifying card:", error);
-      setError(error.response?.data?.detail || "Failed to verify card. Please try again.");
-    } finally {
+      const errorMessage = error.response?.data?.detail || "Verification failed. Please check your card details and try again.";
+      setError(errorMessage);
+      setVerificationResult({
+        success: false,
+        message: errorMessage,
+        details: error.response?.data || {}
+      });
+      setShowResults(true);
       setIsLoading(false);
     }
   };
@@ -212,6 +266,42 @@ const UploadCard: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {/* Verification Results Modal */}
+      {showResults && verificationResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className={`text-xl font-bold mb-4 text-center ${verificationResult.success ? 'text-green-600' : 'text-red-600'}`}>
+              Verification Result
+            </h3>
+            <div className="mb-4">
+              <p className={`text-lg font-medium text-center ${verificationResult.success ? 'text-gray-800' : 'text-red-600'}`}>
+                {verificationResult.message}
+              </p>
+              {verificationResult.success && verificationResult.details && verificationResult.details.card_id && (
+                <p className="mt-2 text-sm text-gray-600 text-center">
+                  Card ID: {verificationResult.details.card_id}
+                </p>
+              )}
+            </div>
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => {
+                  setShowResults(false);
+                  if (verificationResult.success) {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                    setCardName("");
+                  }
+                }}
+                className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

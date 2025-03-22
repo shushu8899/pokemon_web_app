@@ -1,18 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 import os
 from sqlalchemy.orm import Session
-from app.services.card_verification import authenticate_card
+from app.services.card_verification import authenticate_card  # No change here
 from app.models.card import Card
 from app.db.db import get_db
 from app.dependencies.auth import req_user_or_admin
-from app.services.profile_service import ProfileService, get_current_user
+from app.services.profile_service import get_current_user
 from app.models.profile import Profile
 
 router = APIRouter()
 
-@router.get("/test")
-async def test_verification():
-    return {"message": "Verification router is working"}
 
 @router.post("/verify-card/{card_id}", dependencies=[Depends(req_user_or_admin)])
 async def verify_card(
@@ -49,8 +46,8 @@ async def verify_card(
     # Convert ImageURL to Full File Path
     image_path = os.path.join(os.getcwd(), card.ImageURL.strip("/"))
 
-    # Run AI-based verification using stored image
-    verification_result = authenticate_card(image_path)
+    # 🔥 Modified here: Pass both image_path AND card.CardName
+    verification_result = authenticate_card(image_path, card.CardName)
 
     # Check if verification failed with an error
     if verification_result["result"]["result"] == "Error":

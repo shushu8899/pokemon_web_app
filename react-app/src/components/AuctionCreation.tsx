@@ -4,10 +4,25 @@ import {
   getValidatedCards,
   createAuction,
   ValidatedCard,
-  AuctionFormData,
 } from '../services/auction-creation';
 import pikachuPattern from '../assets/pikachu_pattern.png';
 import { getImageUrl } from '../utils/imageUtils';
+
+// Interface for the form state
+interface AuctionFormData {
+  card_id: number;
+  starting_bid: string;
+  minimum_increment: string;
+  auction_duration: number;
+}
+
+// Interface for the API request
+interface AuctionAPIData {
+  card_id: number;
+  starting_bid: number;
+  minimum_increment: number;
+  auction_duration: number;
+}
 
 const AuctionCreation: React.FC = () => {
   const navigate = useNavigate();
@@ -16,8 +31,8 @@ const AuctionCreation: React.FC = () => {
   const [selectedCardDetails, setSelectedCardDetails] = useState<ValidatedCard | null>(null);
   const [formData, setFormData] = useState<AuctionFormData>({
     card_id: 0,
-    starting_bid: 0,
-    minimum_increment: 0,
+    starting_bid: '',
+    minimum_increment: '',
     auction_duration: 24, // Default 24 hours
   });
   const [loading, setLoading] = useState(false);
@@ -64,12 +79,11 @@ const AuctionCreation: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const numValue = parseFloat(value) || 0;
-    console.log(`Updating ${name} to:`, numValue);
+    console.log(`Updating ${name} to:`, value);
     setFormData(prev => {
       const updated = {
         ...prev,
-        [name]: numValue
+        [name]: value
       };
       console.log('Updated form data:', updated);
       return updated;
@@ -83,18 +97,22 @@ const AuctionCreation: React.FC = () => {
       return;
     }
 
-    // Validate input values
-    if (formData.starting_bid <= 0) {
+    // Convert form data to numbers and validate
+    const startingBid = Number(formData.starting_bid);
+    const minIncrement = Number(formData.minimum_increment);
+    const duration = formData.auction_duration;
+
+    if (isNaN(startingBid) || startingBid <= 0) {
       setError('Starting bid must be greater than 0');
       return;
     }
 
-    if (formData.minimum_increment <= 0) {
+    if (isNaN(minIncrement) || minIncrement <= 0) {
       setError('Minimum increment must be greater than 0');
       return;
     }
 
-    if (formData.auction_duration < 1 || formData.auction_duration > 168) {
+    if (duration < 1 || duration > 168) {
       setError('Auction duration must be between 1 and 168 hours');
       return;
     }
@@ -102,12 +120,12 @@ const AuctionCreation: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    // Format the data to match the API requirements
-    const auctionData: AuctionFormData = {
+    // Format the data for the API
+    const auctionData: AuctionAPIData = {
       card_id: selectedCard,
-      starting_bid: Number(formData.starting_bid),
-      minimum_increment: Number(formData.minimum_increment),
-      auction_duration: Number(formData.auction_duration)
+      starting_bid: startingBid,
+      minimum_increment: minIncrement,
+      auction_duration: duration
     };
 
     console.log('Submitting auction data:', auctionData);
@@ -128,7 +146,6 @@ const AuctionCreation: React.FC = () => {
       }
     } finally {
       setLoading(false);
-      
     }
   };
 
@@ -241,7 +258,7 @@ const AuctionCreation: React.FC = () => {
                 />
                 <div className="text-sm text-gray-500 mt-1">
                   <p>Maximum duration: 7 days (168 hours)</p>
-                  <p>End Time: {calculateEndTime(formData.auction_duration)}</p>
+                  <p>End Time: {calculateEndTime(Number(formData.auction_duration))}</p>
                 </div>
               </div>
 

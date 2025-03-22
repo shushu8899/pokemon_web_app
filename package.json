@@ -22,7 +22,8 @@
   "bugs": {
     "url": "https://github.com/StAROfLiGht1993/Modern-Software-Tech-Group-2/issues"
   },
-  "homepage": "https://github.com/StAROfLiGht1993/Modern-Software-Tech-Group-2#readme"
+  "homepage": "https://github.com/StAROfLiGht1993/Modern-Software-Tech-Group-2#readme",
+  "dependencies": {
+    "react-icons": "^5.5.0"
+  }
 }
-
-

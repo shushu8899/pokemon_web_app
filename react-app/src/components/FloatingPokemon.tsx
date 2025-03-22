@@ -19,6 +19,7 @@ const FloatingPokemon: React.FC = () => {
       const poke = await fetchRandomPokemon();
       setPokemon(poke);
     };
+    
     loadPokemon();
   }, []);
 
@@ -27,8 +28,11 @@ const FloatingPokemon: React.FC = () => {
       {pokemon && (
         <motion.div
           animate={{
-            // x: [0, 15, -15, 0], // Move left-right continuously
             y: [0, -5, 0], // Slight floating effect
+          }}
+          whileHover={{
+            scale: 1.02,
+            boxShadow: "3px 3px 15px rgba(255, 215, 0, 0.3)"
           }}
           transition={{
             duration: 2,
@@ -44,7 +48,7 @@ const FloatingPokemon: React.FC = () => {
             boxShadow: "2px 2px 10px rgba(255, 215, 0, 0.2)",
             border: "1px solid #FFD700",
             width: "400px",
-            // color: "#FFD700",
+            transition: "transform 0.2s, box-shadow 0.2s"
           }}
         >
           <img
@@ -52,7 +56,11 @@ const FloatingPokemon: React.FC = () => {
             alt={pokemon.name}
             style={{ width: "100px", height: "100px" }}
           />
-          <p style={{ fontSize: "18px", fontWeight: "bold", height: "10px", padding: "3px"}}>Let's get you a Pokémon today!</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+            <p style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>
+              Let's get you a Pokémon today!
+            </p>
+          </div>
         </motion.div>
       )}
     </div>
