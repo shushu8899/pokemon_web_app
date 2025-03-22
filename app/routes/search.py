@@ -7,28 +7,65 @@ from app.dependencies.services import get_search_service
 router = APIRouter()
 # search_service = SearchService(get_db)
 
+# @router.get("/search/all")
+# def search_all_tables(query: str, search_service: SearchService = Depends(get_search_service)):
+#     """
+#     Endpoint to search across all configured tables based on the search query.
+#     """
+#     results = search_service.search_all_tables(query)
+#     total_results = len(results)
+    
+#     if not results:
+#         raise HTTPException(status_code=404, detail="No results found")
+    
+#     # Group results by table for better organization
+#     grouped_results = {}
+#     for result in results:
+#         table_name = result.get("_table", "unknown")
+#         if table_name not in grouped_results:
+#             grouped_results[table_name] = []
+#         grouped_results[table_name].append(result)
+
+#     return {
+#         "total": total_results,
+#         "tables_matched": len(grouped_results),
+#         "results": grouped_results
+#     }
 @router.get("/search/all")
-def search_all_tables(query: str, search_service: SearchService = Depends(get_search_service)):
+def search_all_tables(
+    query: str, 
+    search_service: SearchService = Depends(get_search_service)
+):
     """
     Endpoint to search across all configured tables based on the search query.
     """
-    results = search_service.search_all_tables(query)
-    total_results = len(results)
+    # Pass pagination parameters to search service
+    search_results = search_service.search_all_tables(query)
     
-    if not results:
+    # The search_results structure now contains:
+    # {
+    #   "total": total_count,
+    #   "results": paginated_results,
+    #   "categories": { "profiles": count, "card_auctions": count },
+    #   "limit": limit,
+    #   "offset": offset
+    # }
+    
+    if not search_results["total"]:
         raise HTTPException(status_code=404, detail="No results found")
     
-    # Group results by table for better organization
+    # Group results by result_type for better organization
     grouped_results = {}
-    for result in results:
-        table_name = result.get("_table", "unknown")
-        if table_name not in grouped_results:
-            grouped_results[table_name] = []
-        grouped_results[table_name].append(result)
+    for result in search_results["results"]:
+        result_type = result.get("result_type", "unknown")
+        if result_type not in grouped_results:
+            grouped_results[result_type] = []
+        grouped_results[result_type].append(result)
 
+    # Return pagination info along with grouped results
     return {
-        "total": total_results,
-        "tables_matched": len(grouped_results),
+        "total": search_results["total"],
+        "categories": search_results["categories"],
         "results": grouped_results
     }
 

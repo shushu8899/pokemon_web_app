@@ -76,7 +76,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed 
               // Create appropriate link based on table type
               const content = (
                 <div 
-                  className="p-4 rounded-lg shadow-lg bg-yellow-300 hover:bg-yellow-400 transition-colors cursor-pointer"
+                  className="p-4 rounded-lg shadow-lg bg-white hover:bg-yellow-400 transition-colors cursor-pointer"
                   style={{ 
                     borderRadius: "15px",
                     boxShadow: "5px 5px 4px rgba(105, 105, 104, 0.5)"
@@ -124,14 +124,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed 
               // Wrap with appropriate link based on table type
               if (tableName.toLowerCase().includes('card')) {
                 return (
-                  <Link key={result.id} to={`/bidding/${result.AuctionID}`}>
+                  <Link key={result.id} to={`/bid-details/${result.AuctionID}`}>
                     {content}
                   </Link>
                 );
               } else if (tableName.toLowerCase().includes('profile') || tableName.toLowerCase().includes('user')) {
                 return (
                   <Link key={result.id} to={`/profile/${result.Username}`} className="block">
-                    <div className="p-4 rounded-lg shadow-lg bg-yellow-300 hover:bg-yellow-400 transition-colors">
+                    <div className="p-4 rounded-lg shadow-lg bg-yellow-400 hover:bg-yellow-500 transition-colors">
                       <h3 className="text-xl font-semibold mb-2">{result.Username}</h3>
                       <p><strong>Rating:</strong> {result.CurrentRating || 0} ({result.NumberOfRating || 0} ratings)</p>
                     </div>
