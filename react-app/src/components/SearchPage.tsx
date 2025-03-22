@@ -75,8 +75,8 @@ const RatingStars: React.FC<{ rating: number, count: number }> = ({ rating, coun
   }
   
   return (
-    <div>
-      <div className="flex items-center gap-1 mb-1">
+    <div className="text-center">
+      <div className="flex items-center gap-1 mb-1 justify-center">
         {stars}
       </div>
       <div className="text-sm text-gray-600">
