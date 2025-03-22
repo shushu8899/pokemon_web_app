@@ -67,6 +67,9 @@ const Header = () => {
                 <Link to={PROTECTED_ROUTES.MY_AUCTIONS} className="block px-4 py-2">
                   <button className="text-black font-bold transition-colors hover:text-[#0908ba]">My Auctions</button>
                 </Link>
+                <Link to={PROTECTED_ROUTES.WINNING_AUCTIONS} className="block px-4 py-2">
+                  <button className="text-black font-bold transition-colors hover:text-[#0908ba]">Winning Bids</button>
+                </Link>
               </div>
             </div>
           </div>

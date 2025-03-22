@@ -38,7 +38,6 @@ class AuctionService:
                 Auction.Status,
                 Auction.EndTime,
                 Auction.HighestBid,
-                Auction.EndTime,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
@@ -51,7 +50,7 @@ class AuctionService:
             .limit(page_size)
             .all()
         )
-        return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
+        return [dict(zip(["AuctionID", "CardID", "Status", "EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
 
     def update_auction_status(self):
@@ -387,8 +386,37 @@ class AuctionService:
 
     def show_winning_auctions(self, user_id: int):
         """
-        Get all auctions that the user has won (status "Closed" and highest bidder ID = user ID)
+        Get all auctions that the user has won (status "Closed" and highest bidder ID = user_id)
+        First updates any auctions that should be closed based on end time
         """
+        # First, update the status of any auctions that have ended
+        current_time = datetime.now()
+        auctions_to_close = (
+            self.db.query(Auction)
+            .filter(
+                Auction.Status != "Closed",
+                Auction.EndTime <= current_time
+            )
+            .all()
+        )
+        
+        for auction in auctions_to_close:
+            auction.Status = "Closed"
+            # Create notification for the winner if there is one
+            if auction.HighestBidderID:
+                message = f"Congratulations! You have won the auction for {auction.CardID} with a bid of ${auction.HighestBid}."
+                notification = Notification(
+                    BidderID=auction.HighestBidderID,
+                    AuctionID=auction.AuctionID,
+                    Message=message,
+                    TimeSent=current_time
+                )
+                self.db.add(notification)
+
+        if auctions_to_close:
+            self.db.commit()
+
+        # Now get the winning auctions
         winning_auctions = (
             self.db.query(
                 Auction.AuctionID,
@@ -396,14 +424,15 @@ class AuctionService:
                 Auction.Status,
                 Auction.HighestBid,
                 Auction.EndTime,
+                Auction.SellerID,  # Add SellerID to the query
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
-                Card.ImageURL,  # Include ImageURL from Card
+                Card.ImageURL,
             )
-            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            .filter(Auction.Status == "Closed", Auction.HighestBidderID == user_id)  # Only include closed auctions won by the user
-            .order_by(Auction.EndTime.desc())  # Sort by latest expiration
+            .join(Card, Auction.CardID == Card.CardID)
+            .filter(Auction.Status == "Closed", Auction.HighestBidderID == user_id)
+            .order_by(Auction.EndTime.desc())
             .all()
         )
 
@@ -413,8 +442,10 @@ class AuctionService:
                     [
                         "AuctionID",
                         "CardID",
+                        "Status",
                         "HighestBid",
                         "EndTime",
+                        "SellerID",  # Add SellerID to the dictionary keys
                         "IsValidated",
                         "CardName",
                         "CardQuality",
@@ -432,3 +463,18 @@ class AuctionService:
         if auction.EndTime < current_time and auction.Status != "Closed":
             auction.Status = "Closed"
             self.db.commit()
+
+    def is_card_available_for_auction(self, card_id: int) -> bool:
+        """
+        Check if a card is available for auction by checking if it's in a closed auction with a highest bidder
+        """
+        closed_auction = (
+            self.db.query(Auction)
+            .filter(
+                Auction.CardID == card_id,
+                Auction.Status == "Closed",
+                Auction.HighestBidderID.isnot(None)
+            )
+            .first()
+        )
+        return closed_auction is None

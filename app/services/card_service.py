@@ -7,6 +7,7 @@ Card DB Services, run database queries for specific manipulations
 from sqlalchemy.orm import Session
 from app.models.card import Card, CardInfo
 from app.models.profile import Profile
+from app.models.auction import Auction
 
 
 class CardService:
@@ -58,6 +59,16 @@ class CardService:
     
     def get_validated_cards_by_user_id(self, user_id: int):
         """
-        Get all validated cards owned by a user
+        Get all validated cards owned by a user that are available for auction
         """
-        return self.db.query(Card).filter(Card.OwnerID == user_id, Card.IsValidated == True).all()
+        cards = self.db.query(Card).filter(Card.OwnerID == user_id, Card.IsValidated == True).all()
+        # Filter out cards that are in closed auctions with a highest bidder
+        available_cards = []
+        for card in cards:
+            if self.db.query(Auction).filter(
+                Auction.CardID == card.CardID,
+                Auction.Status == "Closed",
+                Auction.HighestBidderID.isnot(None)
+            ).first() is None:
+                available_cards.append(card)
+        return available_cards

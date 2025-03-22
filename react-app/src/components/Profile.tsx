@@ -8,6 +8,7 @@ import { faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { getMyAuctions } from '../services/auction-creation';
 import { MyAuction } from '../services/auction-creation';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface UserProfile {
     UserID: number;
@@ -157,12 +158,10 @@ const Profile: React.FC = () => {
                                 {/* Card Image */}
                                 <div className="aspect-w-3 aspect-h-4 mb-4 mt-6">
                                     {auction.ImageURL && (
-                                        <img
-                                            src={auction.ImageURL.startsWith('http') 
-                                                ? auction.ImageURL 
-                                                : `http://127.0.0.1:8000${auction.ImageURL}`}
+                                        <img 
+                                            src={getImageUrl(auction.ImageURL)}
                                             alt={auction.CardName}
-                                            className="w-full h-48 object-contain rounded-lg"
+                                            className="w-full h-64 object-contain rounded-lg"
                                         />
                                     )}
                                 </div>
@@ -175,7 +174,7 @@ const Profile: React.FC = () => {
                                     ) : (
                                         <>
                                             <p className="text-gray-600">Starting Bid: ${auction.StartingBid}</p>
-                                            <p className="text-gray-600">Current Bid: $0</p>
+                                            <p className="text-gray-600">Current Bid: None</p>
                                         </>
                                     )}
                                     <p className="text-gray-600">Ends: {new Date(auction.EndTime).toLocaleDateString()}</p>
