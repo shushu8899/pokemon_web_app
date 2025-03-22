@@ -46,6 +46,9 @@ jobs:
           command: |
               sleep 20
       - run:
+          name: Check if Uvicorn is Running
+          command: ps aux | grep uvicorn
+      - run:
           name: Seed Data
           command: |
             . venv/bin/activate
