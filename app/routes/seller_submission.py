@@ -212,7 +212,7 @@ def delete_auction(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/auction-details/{auction_id}", response_model=AuctionWithCardDetails, dependencies=[Depends(req_user_role)])
+@router.get("/my-auction-details/{auction_id}", response_model=AuctionWithCardDetails, dependencies=[Depends(req_user_role)])
 def get_auction_details(
     auction_id: int,
     auth_info: dict = Depends(get_current_user),

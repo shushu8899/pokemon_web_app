@@ -35,6 +35,7 @@ interface ProtectedRoutes {
   CREATE_AUCTION: string;
   AUCTION_DETAILS: string;
   PROFILE: string;
+  WINNING_AUCTIONS: string;
 }
 
 // Navigation Items
@@ -81,6 +82,7 @@ export const PROTECTED_ROUTES: ProtectedRoutes = {
   CREATE_AUCTION: '/create-auction',
   AUCTION_DETAILS: '/auction/:id',
   PROFILE: '/profile',
+  WINNING_AUCTIONS: '/winning-auctions',
 };
 
 // Navigation Links

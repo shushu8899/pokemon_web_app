@@ -206,7 +206,9 @@ export const getAuctionDetails = async (auctionId: number): Promise<MyAuction> =
     }
 
     console.log('Fetching auction details for ID:', auctionId);
-    const response = await axios.get<MyAuction>(`http://127.0.0.1:8000/auction/auction-details/${auctionId}`, {
+    
+    // Use the seller-specific endpoint for viewing our own auction details
+    const response = await axios.get<MyAuction>(`http://127.0.0.1:8000/auction/my-auction-details/${auctionId}`, {
       headers: {
         'Authorization': authHeader,
         'Content-Type': 'application/json'
@@ -226,7 +228,7 @@ export const getAuctionDetails = async (auctionId: number): Promise<MyAuction> =
       if (error.response.status === 401) {
         throw new Error('Authentication failed. Please log in again.');
       } else if (error.response.status === 403) {
-        throw new Error('You do not have permission to view this auction');
+        throw new Error('You do not have permission to view this auction. You can only view your own auctions.');
       } else if (error.response.status === 404) {
         throw new Error('Auction not found');
       }

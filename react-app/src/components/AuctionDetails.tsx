@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuctionDetails, deleteAuction, updateAuction } from '../services/auction-creation';
 import { MyAuction } from '../services/auction-creation';
+import { getImageUrl } from '../utils/imageUtils';
 
 const styles = {
   container: {
@@ -287,12 +288,10 @@ const AuctionDetails: React.FC = () => {
           <div style={styles.row}>
             <div style={styles.column}>
               {auction.ImageURL && (
-                <img
-                  src={auction.ImageURL.startsWith('http') 
-                    ? auction.ImageURL 
-                    : `http://127.0.0.1:8000${auction.ImageURL}`}
+                <img 
+                  src={getImageUrl(auction.ImageURL)}
                   alt={auction.CardName}
-                  style={styles.image}
+                  className="w-full h-64 object-contain rounded-lg"
                 />
               )}
             </div>
