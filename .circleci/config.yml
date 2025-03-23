@@ -83,7 +83,7 @@ workflows:
               - test
       - deploy:
           requires:
-              - test
+              - build-and-test
           filters:
             branches:
               only: 
