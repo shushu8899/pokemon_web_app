@@ -3,6 +3,7 @@ import numpy as np
 import requests
 from pathlib import Path
 import os
+from app.services.s3_service import s3#  Import s3 directly
 
 API_KEY = "67652158-5942-474b-bcef-653249bba035"
 BASE_URL = "https://api.pokemontcg.io/v2/cards"
@@ -23,28 +24,20 @@ def get_official_card_image(pokemon_name):
     return None
 
 ### 🔹 Download Image from URL
-def download_image_from_url(url, save_path):
+def download_image_from_url(url):
     response = requests.get(url)
     if response.status_code == 200:
-        with open(save_path, 'wb') as f:
-            f.write(response.content)
-        return True
-    return False
+        img_array = np.frombuffer(response.content, np.uint8)
+        return cv2.imdecode(img_array, cv2.IMREAD_GRAYSCALE)
+    return None
 
 ### 🔹 ORB Feature Matching
-def match_images(uploaded_image_path, official_image_path):
-    print(f"🖼️ Uploaded image: {uploaded_image_path}")
-    print(f"🖼️ Official image: {official_image_path}")
-
-    # Read images
-    img1 = cv2.imread(str(uploaded_image_path), cv2.IMREAD_GRAYSCALE)
-    img2 = cv2.imread(str(official_image_path), cv2.IMREAD_GRAYSCALE)
-
+def match_images(uploaded_img, offical_img):
     # Check if images are loaded
-    print(f"📸 Image 1 loaded: {'Yes' if img1 is not None else 'No'}")
-    print(f"📸 Image 2 loaded: {'Yes' if img2 is not None else 'No'}")
+    print(f"📸 Image 1 loaded: {'Yes' if uploaded_img is not None else 'No'}")
+    print(f"📸 Image 2 loaded: {'Yes' if offical_img is not None else 'No'}")
 
-    if img1 is None or img2 is None:
+    if uploaded_img is None or offical_img is None:
         print("❌ One or both images failed to load.")
         return False, 0
 
@@ -52,8 +45,8 @@ def match_images(uploaded_image_path, official_image_path):
     orb = cv2.ORB_create()
 
     # Detect keypoints and descriptors
-    kp1, des1 = orb.detectAndCompute(img1, None)
-    kp2, des2 = orb.detectAndCompute(img2, None)
+    kp1, des1 = orb.detectAndCompute(uploaded_img, None)
+    kp2, des2 = orb.detectAndCompute(offical_img, None)
 
     # Check if descriptors are found
     print(f"🔑 Descriptors in Image 1: {'Found' if des1 is not None else 'Not Found'}")
@@ -95,18 +88,7 @@ def match_images(uploaded_image_path, official_image_path):
 
 ### 🔹 Main Verification Function (Same Name)
 def authenticate_card(image_path, pokemon_name):
-    image_path = Path(image_path)
-
-    if not image_path.exists():
-        return {
-            "message": "Verification failed",
-            "result": {
-                "result": "Error",
-                "pokemon_name": None,
-                "error": f"Image file '{image_path}' not found."
-            }
-        }
-
+    s3.valid_url(image_path)
     try:
         print(f"📄 Verifying Pokémon: {pokemon_name}")
 
@@ -122,11 +104,11 @@ def authenticate_card(image_path, pokemon_name):
                 }
             }
 
-        # Download Official Image
-        official_img_path = Path(__file__).parent.parent / "static" / "images" / f"official_{pokemon_name}.jpg"
-        download_success = download_image_from_url(official_url, official_img_path)
+        # Download Images
+        uploaded_img = download_image_from_url(image_path)
+        official_img = download_image_from_url(official_url)
 
-        if not download_success:
+        if not official_img:
             return {
                 "message": "Verification failed",
                 "result": {
@@ -137,11 +119,7 @@ def authenticate_card(image_path, pokemon_name):
             }
 
         # Match images
-        is_authentic, match_percentage = match_images(image_path, official_img_path)
-
-        # Optional: Delete official image after matching
-        if official_img_path.exists():
-            official_img_path.unlink()
+        is_authentic, match_percentage = match_images(uploaded_img, official_img)
 
         return {
             "message": "Verification complete",
