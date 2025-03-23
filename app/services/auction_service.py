@@ -438,7 +438,24 @@ class AuctionService:
     def show_winning_auctions(self, user_id: int):
         """
         Get all auctions that the user has won (status "Closed" and highest bidder ID = user ID)
+        Also updates auction status to "Closed" if end time has passed
         """
+        # First, update any auctions that have passed their end time
+        current_time = datetime.now()
+        expired_auctions = (
+            self.db.query(Auction)
+            .filter(
+                Auction.EndTime < current_time,
+                Auction.Status != "Closed"  # Only update if not already closed
+            )
+            .all()
+        )
+
+        for auction in expired_auctions:
+            auction.Status = "Closed"
+            self.db.commit()
+
+        # Then get all winning auctions
         winning_auctions = (
             self.db.query(
                 Auction.AuctionID,
@@ -446,7 +463,7 @@ class AuctionService:
                 Auction.Status,
                 Auction.HighestBid,
                 Auction.EndTime,
-                Auction.SellerID,  # Add SellerID to the query
+                Auction.SellerID,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
@@ -467,7 +484,7 @@ class AuctionService:
                         "Status",
                         "HighestBid",
                         "EndTime",
-                        "SellerID",  # Add SellerID to the dictionary keys
+                        "SellerID",
                         "IsValidated",
                         "CardName",
                         "CardQuality",

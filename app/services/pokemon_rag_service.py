@@ -1,5 +1,3 @@
-# ✅ pokemon_rag_service.py
-
 from dotenv import load_dotenv
 import os
 import requests
@@ -25,10 +23,11 @@ class PokemonRagService:
         self.llm = ChatOpenAI(model_name="gpt-4", temperature=0)
         self.chroma_service = ChromaService()
 
-    async def fetch_pokemon_details(self, pokemon_name: str, user_query: str = "Tell me about this Pokémon"):
+    async def fetch_pokemon_details(self, pokemon_id: str, user_query: str = "Tell me about this Pokémon card"):
         headers = {"X-Api-Key": self.pokemon_api_key} if self.pokemon_api_key else {}
 
-        url = f"{self.pokemon_api_url}?q=name:\"{pokemon_name}\"&pageSize=1"
+        # 🔥 Fetch by ID directly!
+        url = f"{self.pokemon_api_url}/{pokemon_id}"
         print(f"📡 API Request URL: {url}")
 
         try:
@@ -37,29 +36,33 @@ class PokemonRagService:
             data = response.json()
 
             if "data" not in data or not data["data"]:
-                return {"error": f"No Pokémon card found for '{pokemon_name}'."}
+                return {"error": f"No Pokémon card found for ID '{pokemon_id}'."}
 
-            card_data = data["data"][0]
+            card_data = data["data"]
 
-            pokemon_info = {
-                "name": card_data.get("name", "Unknown"),
-                "supertype": card_data.get("supertype", "Unknown"),
-                "subtypes": card_data.get("subtypes", "Unknown"),
-                "level": card_data.get("level", "Unknown"),
-                "hp": card_data.get("hp", "Unknown"),
-                "types": card_data.get("types", "Unknown"),
-                "evolvesFrom": card_data.get("evolvesFrom", "Unknown"),
-                "set": card_data.get("set", {}).get("name", "Unknown"),
-                "rarity": card_data.get("rarity", "Unknown"),
-                "tcgplayer": card_data.get("tcgplayer", "Unknown"),
-                "attacks": card_data.get("attacks", "Unknown"),
-                "weaknesses": card_data.get("weaknesses", "Unknown"),
-                "resistances": card_data.get("resistances", "Unknown"),
-                "flavorText": card_data.get("flavorText", "Unknown"),
+            # Filter out 'Unknown' or null values
+            pokemon_info = {k: v for k, v in {
+                "id": card_data.get("id"),
+                "name": card_data.get("name"),
+                "supertype": card_data.get("supertype"),
+                "subtypes": card_data.get("subtypes"),
+                "level": card_data.get("level"),
+                "hp": card_data.get("hp"),
+                "types": card_data.get("types"),
+                "evolvesFrom": card_data.get("evolvesFrom"),
+                "set": card_data.get("set", {}).get("name"),
+                "rarity": card_data.get("rarity"),
+                "tcgplayer": card_data.get("tcgplayer"),
+                "attacks": card_data.get("attacks"),
+                "weaknesses": card_data.get("weaknesses"),
+                "resistances": card_data.get("resistances"),
+                "flavorText": card_data.get("flavorText"),
                 "image_url": card_data.get("images", {}).get("large", "No Image Available"),
-            }
+            }.items() if v and v != "Unknown"}
 
-            static_context = await self.retrieve_pokemon_context_with_retry(pokemon_name)
+            # Get additional RAG context by ID
+            static_context = self.retrieve_pokemon_context(pokemon_id)
+            # Generate description
             pokemon_info["description"] = await self.generate_pokemon_description(pokemon_info, static_context, user_query)
 
             return pokemon_info
@@ -67,47 +70,84 @@ class PokemonRagService:
         except requests.exceptions.RequestException as e:
             return {"error": f"Failed to fetch data from Pokémon API: {str(e)}"}
 
-    async def retrieve_pokemon_context_with_retry(self, pokemon_name: str):
-        for attempt in range(self.max_retries):
-            try:
-                results = self.chroma_service.search_pokemon(query=pokemon_name, distance_threshold=1.0)
-                if results:
-                    combined_text = "\n\n".join([r["document"] for r in results])
-                    return combined_text
-                return "No additional context found."
-            except Exception as e:
-                if "429" in str(e):
-                    if attempt < self.max_retries - 1:
-                        delay = self.base_delay * (2 ** attempt)  # Exponential backoff
-                        print(f"Rate limit hit, retrying in {delay} seconds...")
-                        await asyncio.sleep(delay)
-                        continue
-                    return "Rate limit reached. Please try again in a few moments."
-                return "Error retrieving Pokemon context. Please try again later."
-        return "Service temporarily unavailable due to rate limits. Please try again later."
+    def retrieve_pokemon_context(self, pokemon_id: str):
+        results = self.chroma_service.search_pokemon(pokemon_id=pokemon_id)
+        if results:
+            combined_text = "\n".join([r["document"] for r in results])
+            return combined_text
+        return ""
 
     async def generate_pokemon_description(self, pokemon_info, static_context, user_query):
         for attempt in range(self.max_retries):
             try:
+                # 📌 Construct bullet points section
+                card_details = ""
+                if "id" in pokemon_info:
+                    card_details += f"- ID: {pokemon_info['id']}\n"
+                if "name" in pokemon_info:
+                    card_details += f"- Name: {pokemon_info['name']}\n"
+                if "supertype" in pokemon_info:
+                    card_details += f"- Supertype: {pokemon_info['supertype']}\n"
+                if "subtypes" in pokemon_info:
+                    card_details += f"- Subtypes: {', '.join(pokemon_info['subtypes'])}\n"
+                if "hp" in pokemon_info:
+                    card_details += f"- HP: {pokemon_info['hp']}\n"
+                if "types" in pokemon_info:
+                    card_details += f"- Types: {', '.join(pokemon_info['types'])}\n"
+                if "evolvesFrom" in pokemon_info:
+                    card_details += f"- Evolves From: {pokemon_info['evolvesFrom']}\n"
+                if "set" in pokemon_info:
+                    card_details += f"- Set: {pokemon_info['set']}\n"
+                if "rarity" in pokemon_info:
+                    card_details += f"- Rarity: {pokemon_info['rarity']}\n"
+                if "attacks" in pokemon_info:
+                    attacks = "\n".join([
+                        f"  • {attack['name']} (Cost: {', '.join(attack['cost'])}, Damage: {attack['damage']})"
+                        for attack in pokemon_info['attacks']
+                    ])
+                    card_details += f"- Attacks:\n{attacks}\n"
+                if "tcgplayer" in pokemon_info and "prices" in pokemon_info["tcgplayer"]:
+                    prices_info = pokemon_info["tcgplayer"]["prices"]
+                    price_details = ""
+                    for variant, price_data in prices_info.items():
+                        variant_line = f"  • {variant.capitalize()}: "
+                        sub_prices = []
+                        for key, value in price_data.items():
+                            if value is not None:
+                                sub_prices.append(f"{key.capitalize()}: ${value}")
+                        if sub_prices:
+                            variant_line += ", ".join(sub_prices)
+                            price_details += variant_line + "\n"
+                    if price_details:
+                        card_details += f"- Prices:\n{price_details}"
+
+                # 📝 Build the prompt
                 prompt = f"""
-                Card Details from Pokémon TCG API:
-                Name: {pokemon_info['name']}
-                Supertype: {pokemon_info['supertype']}
-                Subtypes: {pokemon_info['subtypes']}
-                HP: {pokemon_info['hp']}
-                Set: {pokemon_info['set']}
-                Attacks: {pokemon_info['attacks']}
+You are a professional Pokémon card expert. You are tasked to format and explain Pokémon card details.
 
-                Additional Context:
-                {static_context}
+Here are the card details:
+{card_details}
 
-                User Question: {user_query}
+Additional Context (Lore & Tournament Info):
+{static_context}
 
-                Provide a well-structured answer combining the card details and additional context. Format nicely.
-                """
+**Task:**
+1. First, summarize the Pokémon card information into clean, well-structured paragraphs highlighting its key strengths, attacks, set, rarity, price range, and how it fits into gameplay.
+2. Next, describe any lore or interesting facts (use the provided context).
+3. Lastly, include any notable tournament appearances and player placements if mentioned in the context.
+4. Omit any null or unknown values. Do not mention 'Unknown' or 'None'.
+5. Do not repeat the bullet points; integrate details naturally in the paragraph.
+6. End the description cleanly.
 
+User question:
+"{user_query}"
+
+Answer:
+"""
+
+                # 🔥 Call LLM
                 response = self.llm.invoke(prompt)
-                return response.content.replace("\n", "\n\n")
+                return response.content.strip()
 
             except Exception as e:
                 if "429" in str(e):
@@ -118,6 +158,7 @@ class PokemonRagService:
                         continue
                     return "Rate limit reached. Please try again in a few moments."
                 return f"Error generating description: {str(e)}"
+        
         return "Service temporarily unavailable due to rate limits. Please try again later."
 
     def query_pokemon(self, query: str) -> str:

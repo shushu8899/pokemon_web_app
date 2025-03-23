@@ -41,10 +41,6 @@ async def create_card_entry(
 
     owner_id = user_profile.UserID
 
-    # Check if card already exists for this user
-    existing_card = db.query(Card).filter(Card.CardName.ilike(card_name), Card.OwnerID == owner_id).first()
-    if existing_card:
-        raise HTTPException(status_code=400, detail="Card already exists for this user")
 
     # Generate a unique filename for the image
     unique_filename = f"{uuid.uuid4()}_{image.filename}"
