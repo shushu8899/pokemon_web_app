@@ -44,4 +44,4 @@ echo "Applying migrations..."
 python3 -m alembic upgrade head
 
 echo "Starting FastAPI application with uvicorn..."
-nohup uvicorn myapp:app --host 127.0.0.1 --port 8000 &  # Run your app in the background
+nohup uvicorn myapp:app --host 127.0.0.1 --port 8000 & sleep 20 # Run your app in the background
