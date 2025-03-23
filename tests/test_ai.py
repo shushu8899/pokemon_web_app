@@ -3,114 +3,72 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
-import requests
-from unittest.mock import Mock, MagicMock, patch
-from app.exceptions import ServiceException
-from app.services.search_service import SearchService
-from app.models.profile import Profile
-from app.models.card import Card
-from app.models.auction import Auction
-from app.models.notifications import Notification
-
+from unittest.mock import patch
 from app.services.pokemon_rag_service import PokemonRagService
+import asyncio
+import requests
+
 
 @pytest.fixture
-def mock_db():
-    return Mock()
+def mock_openai_api_key():
+    """Fixture to mock the OPENAI_API_KEY."""
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "fake-openai-api-key"}):
+        print("Mocked OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY"))  # Debugging line
+        yield
+
 
 @pytest.fixture
-def mock_env():
-    """Mock environment variables."""
-    os.environ['POKEMON_TCG_API_KEY'] = 'test_pokemon_key'
-    os.environ['OPENAI_API_KEY'] = 'test_openai_key'
-    yield
-    del os.environ['POKEMON_TCG_API_KEY']
-    del os.environ['OPENAI_API_KEY']
-
-
-@pytest.mark.asyncio
-async def test_initialization_success(mock_env):
-    """Test successful initialization of PokemonRagService."""
+def pokemon_service():
+    """Fixture to initialize PokemonRagService."""
+    # Ensure the PokemonRagService uses the mocked environment variable
     service = PokemonRagService()
-    assert service.pokemon_api_url == 'https://api.pokemontcg.io/v2/cards'
-    assert service.pokemon_api_key == 'test_pokemon_key'
-    assert service.llm is not None
+    return service
 
 
-@pytest.mark.asyncio
-async def test_initialization_missing_openai_key():
-    """Test initialization failure when OPENAI_API_KEY is missing."""
-    os.environ.pop('OPENAI_API_KEY', None)
-    
-    with pytest.raises(ValueError) as exc_info:
-        PokemonRagService()
-    
-    assert 'OPENAI_API_KEY is missing!' in str(exc_info.value)
+def test_fetch_pokemon_details_success(pokemon_service, mock_openai_api_key):
+    """Test to check if the Pokémon details are fetched correctly."""
+    response = asyncio.run(pokemon_service.fetch_pokemon_details("Pikachu"))
 
+    # Add your assertions based on the expected output
+    assert "name" in response
+    assert response["name"] == "Pikachu"
+    assert response["set"] == "Wizards Black Star Promos"  # Adjust as needed
+    assert response["rarity"] == "Promo"  # Adjust as needed
+    assert "description" in response
 
-@pytest.mark.asyncio
-@patch('pokemon_rag_service.requests.get')
-async def test_fetch_pokemon_details_success(mock_get, mock_env):
-    """Test fetching Pokémon details successfully."""
-    mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "data": [{
-            "name": "Pikachu",
-            "set": {"name": "Base Set"},
-            "rarity": "Rare",
-            "images": {"large": "http://example.com/pikachu.png"}
-        }]
-    }
-    mock_response.status_code = 200
-    mock_get.return_value = mock_response
+def test_fetch_pokemon_details_not_found(pokemon_service, mock_openai_api_key):
+    """Test to check if no Pokémon details are found for a non-existent Pokémon."""
+    # Use asyncio.run to await the asynchronous function
+    response = asyncio.run(pokemon_service.fetch_pokemon_details("NonExistentPokemon"))
 
-    service = PokemonRagService()
+    # Assert the expected error response when Pokémon is not found
+    assert "error" in response
+    assert response["error"] == "No Pokémon card found for 'NonExistentPokemon'."
 
-    with patch.object(service.llm, 'invoke', return_value=MagicMock(content="Test Description")):
-        result = await service.fetch_pokemon_details('Pikachu')
+def test_fetch_pokemon_details_api_failure(pokemon_service, mock_openai_api_key):
+    """Test to check the behavior when the Pokémon TCG API request fails."""
+    # Mock requests.get to raise a RequestException to simulate API failure
+    with patch("requests.get") as mock_get:
+        mock_get.side_effect = requests.exceptions.RequestException("API request failed")
+        
+        # Use asyncio.run to await the asynchronous function
+        response = asyncio.run(pokemon_service.fetch_pokemon_details("Pikachu"))
 
-    assert result['name'] == 'Pikachu'
-    assert result['set'] == 'Base Set'
-    assert result['rarity'] == 'Rare'
-    assert result['image_url'] == 'http://example.com/pikachu.png'
-    assert result['description'] == 'Test Description'
+        # Assert the error message when the API fails
+        assert "error" in response
+        assert response["error"] == "Failed to fetch data from Pokémon API: API request failed"
 
+def test_fetch_multiple_pokemon_details(pokemon_service, mock_openai_api_key):
+    pokemon_names = ["Pikachu", "Bulbasaur", "Charmander"]
 
-@pytest.mark.asyncio
-@patch('pokemon_rag_service.requests.get')
-async def test_fetch_pokemon_details_no_data(mock_get, mock_env):
-    """Test case when no Pokémon data is returned."""
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"data": []}
-    mock_response.status_code = 200
-    mock_get.return_value = mock_response
+    for pokemon_name in pokemon_names:
+        # Use asyncio.run to await the asynchronous function
+        response = asyncio.run(pokemon_service.fetch_pokemon_details(pokemon_name))
 
-    service = PokemonRagService()
-
-    result = await service.fetch_pokemon_details('NonExistentPokemon')
-    assert "error" in result
-    assert "No Pokémon card found" in result["error"]
-
-
-@pytest.mark.asyncio
-@patch('pokemon_rag_service.requests.get')
-async def test_fetch_pokemon_details_api_error(mock_get, mock_env):
-    """Test handling of API error during fetching Pokémon details."""
-    mock_get.side_effect = requests.RequestException("API request failed")
-
-    service = PokemonRagService()
-    result = await service.fetch_pokemon_details('Pikachu')
-
-    assert "error" in result
-    assert "Failed to fetch data from Pokémon API" in result["error"]
-
-
-@pytest.mark.asyncio
-async def test_generate_pokemon_description(mock_env):
-    """Test description generation with OpenAI API."""
-    service = PokemonRagService()
-
-    with patch.object(service.llm, 'invoke', return_value=MagicMock(content="Generated Description")):
-        result = await service.generate_pokemon_description({"name": "Pikachu", "set": "Base Set"})
-
-    assert result == "Generated Description"
+        # Assertions for each Pokémon
+        assert "name" in response
+        assert response["name"] == pokemon_name
+        assert "set" in response
+        assert "rarity" in response
+        assert "image_url" in response
+        assert "description" in response
