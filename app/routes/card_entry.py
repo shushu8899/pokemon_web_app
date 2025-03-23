@@ -10,6 +10,11 @@ from app.dependencies.auth import req_user_or_admin
 from app.services.profile_service import get_current_user
 from typing import List
 from app.models.auction import Auction
+from datetime import datetime, timezone
+from app.models.notifications import Notification
+from app.services.websocket_manager import websocket_manager
+from sqlalchemy.exc import SQLAlchemyError
+import json
 
 router = APIRouter()
 
@@ -64,11 +69,44 @@ async def create_card_entry(
     db.commit()
     db.refresh(new_card)
 
+    # Add notification
+    try:
+        message = f"Card '{card_name}' uploaded successfully."
+        new_notification = Notification(
+            ReceiverID=owner_id,
+            AuctionID=None,
+            Message=message,
+            IsRead=False,
+        )
+        db.add(new_notification)
+        db.commit()
+        print("✅ Notification created successfully")
+
+        # ✅ Send real-time WebSocket notification
+        await websocket_manager.send_notification(
+            user_profile.Email,
+            {
+                "notification_id": new_notification.NotificationID,
+                "auction_id": new_notification.AuctionID,
+                "message": new_notification.Message,
+                "sent_date": new_notification.TimeSent.isoformat(),
+                "is_read": False
+            }
+        )
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        print("❌ SQLAlchemy error when adding notification:", e)
+        raise HTTPException(status_code=500, detail="Notification insert failed")
+    except Exception as e:
+        print("⚠️ Error sending WebSocket notification:", e)
+
     return {
         "message": "Card entry successful",
         "card_id": new_card.CardID,
         "image_url": image_url
     }
+
 
 @router.put("/card-entry/update", dependencies=[Depends(req_user_or_admin)])
 async def update_card_entry(
