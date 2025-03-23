@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   test:
     docker:
-      - image: circleci/python:3.8
+      - image: circleci/python:3.9
     steps:
       - checkout
       - run:
@@ -27,7 +27,7 @@ jobs:
 
   build-and-test:
     docker:
-      - image: circleci/python:3.8
+      - image: circleci/python:3.9
     steps:
       - checkout
       - run:
@@ -52,7 +52,7 @@ jobs:
 
   deploy:
     docker:
-      - image: cimg/python:3.8  # Base image for deployment
+      - image: cimg/python:3.9  # Base image for deployment
 
     steps:
       - checkout  # Pull down your code
