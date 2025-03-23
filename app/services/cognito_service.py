@@ -93,42 +93,6 @@ class CognitoService:
         ).digest()
         return base64.b64encode(dig).decode()
 
-# ------------------------- Update the authenticate_user method for login -------------------------
-    # def authenticate_user(self, username: str, password: str):
-    #     """
-    #     Authenticate a user with Cognito using their username and password.
-
-    #     :param username: Username of the user.
-    #     :param password: Password of the user.
-    #     :return: Dictionary containing tokens if authentication is successful.
-    #     """
-    #     try:
-    #         # Calculate the SECRET_HASH
-    #         secret_hash = self.calculate_secret_hash(username)
-
-    #         # Initiate the authentication
-    #         response = self.client.initiate_auth(
-    #             AuthFlow="USER_PASSWORD_AUTH",
-    #             AuthParameters={
-    #                 "USERNAME": username,
-    #                 "PASSWORD": password,
-    #                 "SECRET_HASH": secret_hash
-    #             },
-    #             ClientId=self.client_id
-    #         )
-
-    #         return {
-    #             "id_token": response["AuthenticationResult"]["IdToken"],
-    #             "access_token": response["AuthenticationResult"]["AccessToken"],
-    #             "refresh_token": response["AuthenticationResult"]["RefreshToken"]
-    #         }
-
-    #     except self.client.exceptions.NotAuthorizedException: #based on response documentation for initiate_auth errors
-    #         raise ServiceException(status_code=401, detail="Invalid username or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
-    #     except self.client.exceptions.UserNotConfirmedException:
-    #         raise ServiceException(status_code=403, detail="User account not confirmed.")
-    #     except Exception as e:
-    #         raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
     # update user login to use only email -- to update login to check if user exists in aws cognito first
     def authenticate_user(self, email: str, password: str):
@@ -195,34 +159,6 @@ class CognitoService:
         except Exception as e:
             raise ServiceException(status_code=403, detail=f"Invalid token or permissions: {str(e)}")
 
-# ------------------------- Update the register_user method for registration 
-    # def register_user(self, username: str, email: str, password: str):
-    #     """
-    #     Register a new user with a distinct username, and store the user's email in Cognito.
-    #     """
-    #     try:
-    #         # Calculate the SECRET_HASH if your app client has a client secret
-    #         secret_hash = self.calculate_secret_hash(username)
-
-    #         response = self.client.sign_up(
-    #             ClientId=self.client_id,
-    #             SecretHash=secret_hash,
-    #             Username=username,      # <--- Distinct username
-    #             Password=password,
-    #             UserAttributes=[
-    #                 {
-    #                     'Name': 'email',
-    #                     'Value': email       # <--- Storing user's email as an attribute
-    #                 }
-    #             ]
-    #         )
-
-    #         return response
-
-    #     except self.client.exceptions.UsernameExistsException:
-    #         raise ServiceException(status_code=400, detail="User already exists.")
-    #     except Exception as e:
-    #         raise ServiceException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 
     def register_user(self, email: str, password: str):
@@ -255,32 +191,6 @@ class CognitoService:
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Registration failed: {str(e)}")
  
-#  --------------------------------- End of update ---------------------------------
-    
-# ------------------------- Update the confirm_user method for email confirmation -------------------------
-    # def confirm_user(self, username: str, confirmation_code: str):
-    #     """
-    #     Confirm the user's signup with the code they received by email
-    #     """
-    #     try:
-    #         # First confirm the sign-up
-    #         self.client.confirm_sign_up(
-    #             ClientId=self.client_id,
-    #             Username=username,
-    #             ConfirmationCode=confirmation_code,
-    #             SecretHash=self.calculate_secret_hash(username)
-    #         )
-
-    #         return "User confirmed successfully."
-        
-    #     except self.client.exceptions.CodeMismatchException:
-    #         raise ServiceException(status_code=400, detail="Invalid confirmation code.")
-    #     except self.client.exceptions.ExpiredCodeException:
-    #         raise ServiceException(status_code=400, detail="Confirmation code has expired.")
-    #     except self.client.exceptions.UserNotFoundException:
-    #         raise ServiceException(status_code=404, detail="User not found.")
-    #     except Exception as e:
-    #         raise ServiceException(status_code=500, detail=f"Confirmation failed: {str(e)}")
 
     def confirm_user(self, email: str, confirmation_code: str):
         """
