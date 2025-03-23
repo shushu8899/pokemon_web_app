@@ -1,7 +1,6 @@
 import chromadb
 import chromadb.utils.embedding_functions as embedding_functions
 from typing import List
-import openai
 import os
 from dotenv import load_dotenv
 
@@ -24,46 +23,49 @@ class ChromaService:
             embedding_function=self.embedding_function
         )
 
-    def add_pokemon(self, pokemon_name: str, description: str):
+    def add_pokemon(self, pokemon_id: str, pokemon_name: str, description: str):
         """
-        Add Pokémon description embedding to ChromaDB.
+        Add Pokémon description embedding to ChromaDB with unique TCG ID.
         """
-        pokemon_id = pokemon_name.lower().replace(" ", "_")  # e.g., dragapult_dusknoir
-
         self.pokemon_collection.upsert(
             ids=[pokemon_id],
             documents=[description],
-            metadatas=[{"pokemon_name": pokemon_name}]
+            metadatas=[{"pokemon_name": pokemon_name, "pokemon_id": pokemon_id}]
         )
-        print(f"✅ Added {pokemon_name} to ChromaDB successfully.")
+        print(f"✅ Added {pokemon_name} (ID: {pokemon_id}) to ChromaDB successfully.")
 
-    def search_pokemon(self, query: str, n_results: int = 3, distance_threshold: float = 0.8):
+    def search_pokemon(self, pokemon_id: str, n_results: int = 1):
         """
-        Search Pokémon context in ChromaDB based on query.
+        Search Pokémon context in ChromaDB based on TCG ID.
         """
-        results = self.pokemon_collection.query(
-            query_texts=[query],
-            n_results=n_results
-        )
-        metadatas = results["metadatas"][0]
-        documents = results["documents"][0]
-        distances = results["distances"][0]
+        results = self.pokemon_collection.get(ids=[pokemon_id])
 
-        filtered_results = [
-            {"metadata": metadata, "document": doc, "distance": distance}
-            for metadata, doc, distance in zip(metadatas, documents, distances)
-            if distance <= distance_threshold
+        if not results["metadatas"]:
+            return []
+
+        return [
+            {"metadata": metadata, "document": doc}
+            for metadata, doc in zip(results["metadatas"], results["documents"])
         ]
 
-        return filtered_results
-
-    def delete_pokemon(self, pokemon_name: str):
+    def delete_pokemon(self, pokemon_id: str):
         """
-        Delete Pokémon context from ChromaDB.
+        Delete Pokémon context from ChromaDB using TCG ID.
         """
-        pokemon_id = pokemon_name.lower().replace(" ", "_")
         existing = self.pokemon_collection.get(ids=[pokemon_id])
         if not existing["metadatas"]:
             return False  # Not found
         self.pokemon_collection.delete(ids=[pokemon_id])
+        print(f"🗑️ Deleted Pokémon card ID: {pokemon_id} from ChromaDB.")
         return True
+
+    def update_pokemon(self, pokemon_id: str, pokemon_name: str, description: str):
+        """
+        Update Pokémon description embedding in ChromaDB. Works like upsert.
+        """
+        self.pokemon_collection.upsert(
+            ids=[pokemon_id],
+            documents=[description],
+            metadatas=[{"pokemon_name": pokemon_name, "pokemon_id": pokemon_id}]
+        )
+        print(f"🔄 Updated Pokémon {pokemon_name} (ID: {pokemon_id}) in ChromaDB successfully.")

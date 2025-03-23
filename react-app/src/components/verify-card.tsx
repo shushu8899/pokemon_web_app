@@ -17,24 +17,22 @@ interface VerificationResult {
     details: any;
 }
 
-const UploadCard: React.FC = () => {
+const VerifyCard: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardName, setCardName] = useState<string>("");
-  const [cardQuality, setCardQuality] = useState<string>("MINT");
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showTcgIdModal, setShowTcgIdModal] = useState(false);
+  const [tcgCardId, setTcgCardId] = useState<string>("");
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
-    setSuccessMessage(null);
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 5 * 1024 * 1024) {
         setError("File size too large. Please upload an image under 5MB.");
         return;
       }
@@ -44,22 +42,19 @@ const UploadCard: React.FC = () => {
       }
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      setShowTcgIdModal(true); // Show TCG ID modal after file selection
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
-    setVerificationResult(null);
-    setSuccessMessage(null);
-
-    const formData = new FormData();
-    if (selectedFile) {
-      formData.append("file", selectedFile);
+  const handleContinueVerification = async () => {
+    if (!tcgCardId.trim()) {
+      setError("Please enter a Pokemon TCG Card ID");
+      return;
     }
-    formData.append("card_name", cardName);
-    formData.append("card_quality", cardQuality);
+
+    setIsLoading(true);
+    setError(null);
+    setShowTcgIdModal(false);
 
     try {
       const authHeader = getAuthorizationHeader();
@@ -67,9 +62,13 @@ const UploadCard: React.FC = () => {
         throw new Error('You must be logged in to verify cards');
       }
 
-      // Step 1: Upload and verify the card
-      console.log('Sending verification request...');
-      const response = await axios.post<UploadResponse>(
+      // Step 1: Upload the card image
+      const formData = new FormData();
+      if (selectedFile) {
+        formData.append("file", selectedFile);
+      }
+
+      const uploadResponse = await axios.post(
         `${API_BASE_URL}/entry/card-entry/unvalidated`,
         formData,
         {
@@ -80,13 +79,12 @@ const UploadCard: React.FC = () => {
         }
       );
 
-      console.log('Upload response:', response.data);
-      const cardId = response.data.card_id;
+      const cardId = uploadResponse.data.card_id;
 
-      // Step 2: Verify the card
+      // Step 2: Verify the card with TCG ID
       const verifyResponse = await axios.post(
         `${API_BASE_URL}/verification/verify-card/${cardId}`,
-        {},
+        { tcg_card_id: tcgCardId },
         {
           headers: {
             'Authorization': authHeader,
@@ -94,36 +92,28 @@ const UploadCard: React.FC = () => {
         }
       );
 
-      console.log('Verification response:', verifyResponse.data);
-
-      // Check if the card is validated based on the is_validated flag
-      if (verifyResponse.data.is_validated) {
-        // For authenticated cards, redirect to My Cards page
-        setIsLoading(false);
-        setShowResults(false);
-        setVerificationResult(null);
-        navigate('/my-cards');
-      } else {
-        // For fake cards, show the modal
-        setVerificationResult({
-          success: false,
-          message: verifyResponse.data.message || "Card verification failed",
-          details: { card_id: cardId }
-        });
-        setShowResults(true);
-        setIsLoading(false);
-      }
+      setVerificationResult({
+        success: verifyResponse.data.is_validated,
+        message: verifyResponse.data.is_validated 
+          ? "Your card was verified successfully"
+          : "Your card was not verified successfully",
+        details: verifyResponse.data
+      });
+      setShowResults(true);
 
     } catch (error: any) {
       console.error("Error verifying card:", error);
-      const errorMessage = error.response?.data?.detail || "Verification failed. Please check your card details and try again.";
-      setError(errorMessage);
-      setVerificationResult({
-        success: false,
-        message: errorMessage,
-        details: error.response?.data || {}
-      });
-      setShowResults(true);
+      // Handle different types of errors
+      if (error.response?.status === 422) {
+        setError("Invalid TCG Card ID format. Please check and try again.");
+      } else if (error.response?.data?.detail) {
+        setError(typeof error.response.data.detail === 'string' 
+          ? error.response.data.detail 
+          : "Verification failed. Please try again.");
+      } else {
+        setError("Verification failed. Please try again.");
+      }
+    } finally {
       setIsLoading(false);
     }
   };
@@ -171,55 +161,57 @@ const UploadCard: React.FC = () => {
           </div>
 
           {/* File Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Card Image
-            </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-              <div className="space-y-1 text-center">
-                {previewUrl && (
-                  <div className="mb-4">
-                    <img
-                      src={previewUrl}
-                      alt="Card preview"
-                      className="mx-auto h-48 w-auto object-contain"
-                    />
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Card Image
+              </label>
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                <div className="space-y-1 text-center">
+                  {previewUrl && (
+                    <div className="mb-4">
+                      <img
+                        src={previewUrl}
+                        alt="Card preview"
+                        className="mx-auto h-48 w-auto object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="flex text-sm text-gray-600">
+                    <label
+                      htmlFor="file-upload"
+                      className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                    >
+                      <span>Upload a file</span>
+                      <input
+                        id="file-upload"
+                        name="file-upload"
+                        type="file"
+                        className="sr-only"
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                      />
+                    </label>
+                    <p className="pl-1">or drag and drop</p>
                   </div>
-                )}
-                <div className="flex text-sm text-gray-600">
-                  <label
-                    htmlFor="file-upload"
-                    className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                  >
-                    <span>Upload a file</span>
-                    <input
-                      id="file-upload"
-                      name="file-upload"
-                      type="file"
-                      className="sr-only"
-                      onChange={handleFileSelect}
-                      accept="image/*"
-                    />
-                  </label>
-                  <p className="pl-1">or drag and drop</p>
+                  <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
                 </div>
-                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
               </div>
             </div>
-          </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    {error}
-                  </h3>
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      {error}
+                    </h3>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Success Message */}
           {successMessage && (
@@ -267,36 +259,80 @@ const UploadCard: React.FC = () => {
         </form>
       </div>
 
+      {/* TCG ID Input Modal */}
+      {showTcgIdModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-center">Pokemon TCG Card ID</h3>
+            <p className="text-sm text-gray-600 mb-4 text-center">
+              Please key in Pokemon TCG Card ID. You may get the Pokemon TCG Card ID from{' '}
+              <a 
+                href="https://pokemoncard.io/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                pokemoncard.io
+              </a>
+            </p>
+            <input
+              type="text"
+              value={tcgCardId}
+              onChange={(e) => setTcgCardId(e.target.value)}
+              placeholder="Enter Pokemon TCG Card ID"
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+            />
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => setShowTcgIdModal(false)}
+                className="bg-gray-500 text-white px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleContinueVerification}
+                disabled={isLoading}
+                className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors disabled:bg-gray-400"
+              >
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <img src={pokemonSpinner} alt="Loading..." className="w-5 h-5 mr-2" />
+                    <span>Verifying...</span>
+                  </div>
+                ) : (
+                  'Continue Verification'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Verification Results Modal */}
       {showResults && verificationResult && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className={`text-xl font-bold mb-4 text-center ${verificationResult.success ? 'text-green-600' : 'text-red-600'}`}>
-              Verification Result
-            </h3>
+            <h3 className="text-xl font-bold mb-4 text-center">Verification Results</h3>
             <div className="mb-4">
-              <p className={`text-lg font-medium text-center ${verificationResult.success ? 'text-gray-800' : 'text-red-600'}`}>
+              <p className={`text-lg font-medium text-center ${verificationResult.success ? 'text-green-600' : 'text-red-600'}`}>
                 {verificationResult.message}
               </p>
-              {verificationResult.success && verificationResult.details && verificationResult.details.card_id && (
-                <p className="mt-2 text-sm text-gray-600 text-center">
-                  Card ID: {verificationResult.details.card_id}
-                </p>
-              )}
             </div>
             <div className="mt-4 flex justify-center">
               <button
                 onClick={() => {
                   setShowResults(false);
                   if (verificationResult.success) {
+                    navigate('/my-cards');
+                  } else {
                     setSelectedFile(null);
                     setPreviewUrl(null);
-                    setCardName("");
+                    setTcgCardId("");
                   }
                 }}
                 className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors"
               >
-                Close
+                {verificationResult.success ? 'View My Cards' : 'Try Again'}
               </button>
             </div>
           </div>
@@ -306,5 +342,5 @@ const UploadCard: React.FC = () => {
   );
 };
 
-export default UploadCard;
+export default VerifyCard;
 

@@ -1,115 +1,131 @@
-import React, { useEffect, useState } from 'react';
-import { getUnvalidatedCards, UnvalidatedCard, verifyCard } from '../services/card-service';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { getAuthorizationHeader } from "../services/auth-service";
+import { API_BASE_URL } from '../config';
 import pokemonSpinner from "../assets/pokeballloading.gif";
 
+interface Card {
+  CardID: number;
+  CardName: string;
+  CardQuality: string;
+  ImageURL: string;
+  IsValidated: boolean;
+  OwnerID: number;
+}
+
+interface VerificationResult {
+  success: boolean;
+  message: string;
+  details: any;
+}
+
 const UnvalidatedCards: React.FC = () => {
-  const [cards, setCards] = useState<UnvalidatedCard[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
-  const [verifying, setVerifying] = useState(false);
-  const [verificationResults, setVerificationResults] = useState<{ [key: number]: { success: boolean; message: string } }>({});
-  const [showResultsPopup, setShowResultsPopup] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [showTcgIdModal, setShowTcgIdModal] = useState(false);
+  const [tcgCardId, setTcgCardId] = useState<string>("");
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
-    const fetchCards = async () => {
-      try {
-        const data = await getUnvalidatedCards();
-        setCards(data);
-      } catch (err: any) {
-        setError(err.response?.data?.detail || err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCards();
+    fetchUnvalidatedCards();
   }, []);
 
-  const handleCardClick = (cardId: number) => {
-    if (verifying) return; // Prevent selection while verification is in progress
-    
-    setSelectedCardId(prevId => prevId === cardId ? null : cardId);
+  const fetchUnvalidatedCards = async () => {
+    try {
+      const authHeader = getAuthorizationHeader();
+      if (!authHeader) {
+        throw new Error('You must be logged in to view cards');
+      }
+
+      const response = await axios.get(
+        `${API_BASE_URL}/entry/card-entry/unvalidated`,
+        {
+          headers: {
+            'Authorization': authHeader,
+          },
+        }
+      );
+
+      setCards(response.data);
+    } catch (error: any) {
+      console.error("Error fetching unvalidated cards:", error);
+      setError(error.response?.data?.detail || "Failed to fetch unvalidated cards");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerifyCards = async () => {
-    if (!selectedCardId) {
-      alert("Please select a card to verify");
+  const handleVerifyCard = async (card: Card) => {
+    setSelectedCard(card);
+    setShowTcgIdModal(true);
+  };
+
+  const handleContinueVerification = async () => {
+    if (!tcgCardId.trim()) {
+      setError("Please enter a Pokemon TCG Card ID");
       return;
     }
 
-    setVerifying(true);
-    setVerificationResults({});
-    const results: { [key: number]: { success: boolean; message: string } } = {};
+    if (!selectedCard) {
+      setError("No card selected for verification");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setShowTcgIdModal(false);
 
     try {
-      const result = await verifyCard(selectedCardId);
-      results[selectedCardId] = { 
-        success: result.is_validated, 
-        message: result.message 
-      };
-      
-      // Only remove the card if verification was successful
-      if (result.is_validated) {
-        setCards(prev => prev.filter(card => card.CardID !== selectedCardId));
+      const authHeader = getAuthorizationHeader();
+      if (!authHeader) {
+        throw new Error('You must be logged in to verify cards');
       }
-    } catch (err: any) {
-      results[selectedCardId] = { 
-        success: false, 
-        message: err.response?.data?.detail || err.message || 'Verification failed'
-      };
+
+      const formData = new FormData();
+      formData.append('pokemon_tcg_id', tcgCardId);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/verification/verify-card/${selectedCard.CardID}`,
+        formData,
+        {
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      setVerificationResult({
+        success: response.data.is_validated,
+        message: response.data.is_validated 
+          ? "Your card was verified successfully."
+          : "Your card was not verified successfully.",
+        details: response.data
+      });
+      setShowResults(true);
+
+      // Refresh the cards list after successful verification
+      if (response.data.is_validated) {
+        fetchUnvalidatedCards();
+      }
+
+    } catch (error: any) {
+      console.error("Error verifying card:", error);
+      if (error.response?.status === 422) {
+        setError("Invalid TCG Card ID format. Please check and try again.");
+      } else if (error.response?.data?.detail) {
+        setError(typeof error.response.data.detail === 'string' 
+          ? error.response.data.detail 
+          : "Verification failed. Please try again.");
+      } else {
+        setError("Verification failed. Please try again.");
+      }
     } finally {
-      setVerificationResults(results);
-      setVerifying(false);
-      setShowResultsPopup(true);
+      setLoading(false);
     }
-  };
-
-  // Results Popup Component
-  const ResultsPopup = () => {
-    if (!showResultsPopup) return null;
-
-    const result = selectedCardId ? verificationResults[selectedCardId] : null;
-    const card = selectedCardId ? cards.find(c => c.CardID === selectedCardId) : null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
-          <h2 className="text-2xl font-bold mb-4 text-center">Verification Result</h2>
-          {card && result && (
-            <div className="mb-4 p-4 rounded-lg border text-center">
-              <div className="flex flex-col items-center gap-4">
-                <img 
-                  src={card.ImageURL.startsWith('http') 
-                    ? card.ImageURL 
-                    : `http://127.0.0.1:8000${card.ImageURL}`}
-                  alt={card.CardName}
-                  className="w-48 h-48 object-contain"
-                />
-                <div>
-                  <p className="font-semibold text-lg">{card.CardName}</p>
-                  <p className={`mt-2 text-lg font-medium ${result.success ? 'text-green-600' : 'text-red-600'}`}>
-                    {result.message}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={() => {
-                setShowResultsPopup(false);
-                setSelectedCardId(null);
-                setVerificationResults({});
-              }}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
@@ -123,97 +139,127 @@ const UnvalidatedCards: React.FC = () => {
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-red-600 text-center">
-          <p className="text-xl font-bold">Error</p>
-          <p>{error}</p>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: "Roboto" }}>Verify Cards</h1>
-        
-        {cards.length === 0 ? (
-          <div className="text-center text-gray-600 py-8">
-            You don't have any cards pending verification.
-          </div>
-        ) : (
-          <>
-            <div className="text-center mb-4 text-gray-600">
-              Click on a card to select it for verification
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-              {cards.map((card) => (
-                <div
-                  key={card.CardID}
-                  className={`bg-white rounded-lg shadow-lg p-4 cursor-pointer transition-all duration-200 ${
-                    selectedCardId === card.CardID ? 'ring-4 ring-yellow-400 transform scale-105' : 'hover:shadow-xl'
-                  } ${verifying ? 'pointer-events-none opacity-50' : ''}`}
-                  onClick={() => handleCardClick(card.CardID)}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8 text-center">Verify a Card</h1>
+      
+      {cards.length === 0 ? (
+        <div className="text-center text-gray-500">
+          No unvalidated cards found.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cards.map((card) => (
+            <div key={card.CardID} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <img
+                src={card.ImageURL.startsWith('http') 
+                  ? card.ImageURL 
+                  : `${API_BASE_URL}${card.ImageURL}`}
+                alt={card.CardName}
+                className="w-full h-48 object-contain p-4"
+              />
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2 text-center">{card.CardName}</h3>
+                <p className="text-sm text-gray-500 mb-2 text-center">
+                  Quality: {card.CardQuality}
+                </p>
+                <button
+                  onClick={() => handleVerifyCard(card)}
+                  className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
                 >
-                  {/* Card Image */}
-                  <div className="aspect-w-3 aspect-h-4 mb-4">
-                    <img
-                      src={card.ImageURL.startsWith('http') 
-                        ? card.ImageURL 
-                        : `http://127.0.0.1:8000${card.ImageURL}`}
-                      alt={card.CardName}
-                      className="w-full h-64 object-contain rounded-lg"
-                    />
-                  </div>
-
-                  {/* Card Details */}
-                  <div className="mt-4 text-center">
-                    <h3 className="text-lg font-semibold mb-2">{card.CardName}</h3>
-                    <p className="text-gray-600">Quality: {card.CardQuality}</p>
-                    <div className="mt-4">
-                      {verificationResults[card.CardID] ? (
-                        <span className={`px-3 py-1 rounded-full text-sm ${
-                          verificationResults[card.CardID].success 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {verificationResults[card.CardID].message}
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                          Pending Validation
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  Verify Card
+                </button>
+              </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            {/* Verify Button */}
-            <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
-              <button
-                onClick={handleVerifyCards}
-                disabled={verifying || !selectedCardId}
-                className={`px-8 py-3 rounded-full shadow-lg text-white font-semibold transition-all duration-200 ${
-                  selectedCardId && !verifying
-                    ? 'bg-blue-500 hover:bg-blue-600'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
+      {/* TCG ID Input Modal */}
+      {showTcgIdModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-center">Pokemon TCG Card ID</h3>
+            <p className="text-sm text-gray-600 mb-4 text-center">
+              Please key in Pokemon TCG Card ID. You may get the Pokemon TCG Card ID from{' '}
+              <a 
+                href="https://pokemoncard.io/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800"
               >
-                {verifying ? (
+                pokemoncard.io
+              </a>
+            </p>
+            <input
+              type="text"
+              value={tcgCardId}
+              onChange={(e) => setTcgCardId(e.target.value)}
+              placeholder="Enter Pokemon TCG Card ID"
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+            />
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => setShowTcgIdModal(false)}
+                className="bg-gray-500 text-white px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleContinueVerification}
+                disabled={loading}
+                className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors disabled:bg-gray-400"
+              >
+                {loading ? (
                   <div className="flex items-center">
-                    <img src={pokemonSpinner} alt="Verifying..." className="w-5 h-5 mr-2" />
-                    <span>Verifying Card...</span>
+                    <img src={pokemonSpinner} alt="Loading..." className="w-5 h-5 mr-2" />
+                    <span>Verifying...</span>
                   </div>
                 ) : (
-                  selectedCardId ? 'Verify Selected Card' : 'Select a Card to Verify'
+                  'Continue Verification'
                 )}
               </button>
             </div>
-          </>
-        )}
-        <ResultsPopup />
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* Verification Results Modal */}
+      {showResults && verificationResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-center">Verification Results</h3>
+            <div className="mb-4">
+              <p className={`text-lg font-medium text-center ${verificationResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                {verificationResult.message}
+              </p>
+            </div>
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => {
+                  setShowResults(false);
+                  if (verificationResult.success) {
+                    fetchUnvalidatedCards();
+                  } else {
+                    setTcgCardId("");
+                  }
+                }}
+                className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors"
+              >
+                {verificationResult.success ? 'Close' : 'Try Again'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
