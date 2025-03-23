@@ -351,7 +351,52 @@ const Header = () => {
                             backgroundColor: notification.is_read ? 'white' : '#f8f9fa'
                           }}
                         >
-                          <div style={{ marginBottom: '0.5rem' }}>{notification.message}</div>
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            {/* Card uploaded → My Cards */}
+                            {notification.message.includes("Card") ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => navigate(PROTECTED_ROUTES.MY_CARDS)}
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Outbid → Bidding page */
+                            ) : notification.message.includes("outbid") ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() =>
+                                  notification.auction_id
+                                    ? navigate(`/bid-details/${notification.auction_id}`)
+                                    : alert("This auction has ended.")
+                                }
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Auction ended (with or without bids) → Auction details */
+                            ) : notification.message.includes("has ended") && notification.auction_id ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => navigate(`/auction/${notification.auction_id}`)}
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Won auction → Winning bids page */
+                            ) : notification.message.includes("won the auction") ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => navigate(PROTECTED_ROUTES.WINNING_AUCTIONS)}
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Default fallback */
+                            ) : (
+                              <span>{notification.message}</span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '0.8rem', color: '#666' }}>
                             {new Date(notification.sent_date).toLocaleString()}
                           </div>
