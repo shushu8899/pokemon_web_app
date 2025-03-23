@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from "axios";
 import pokemonSpinner from "../assets/pokeballloading.gif";
 import { getAuthorizationHeader } from "../services/auth-service";
+import { getPresignedUrl, uploadToS3 } from "../services/card-service";
 
 interface CardDetails {
     card_name: string;
@@ -88,13 +89,22 @@ const EditCard: React.FC = () => {
                 throw new Error('You must be logged in to edit cards');
             }
 
+            let s3ImageUrl = null;
+            if (selectedFile) {
+                const { upload_url, s3_url } = await getPresignedUrl(selectedFile, authHeader);
+        
+                await uploadToS3(selectedFile, upload_url);
+        
+                s3ImageUrl = s3_url;
+            }
+
             const formData = new FormData();
             formData.append('card_name', cardName);
             formData.append('card_quality', cardQuality);
             formData.append('card_id', cardId.toString());
-            if (selectedFile) {
-                formData.append('image', selectedFile);
-            }
+            if (s3ImageUrl) {
+                formData.append("image_url", s3ImageUrl);
+              }
 
             await axios.put(
                 `http://127.0.0.1:8000/entry/card-entry/update`,

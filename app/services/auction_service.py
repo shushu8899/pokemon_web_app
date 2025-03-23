@@ -12,12 +12,9 @@ from app.models.notifications import Notification
 from app.services.profile_service import ProfileService
 from datetime import datetime, timedelta
 from fastapi import HTTPException, BackgroundTasks, UploadFile
-import os
-import shutil
-import uuid
-import logging
 from typing import Union
 from app.exceptions import ServiceException
+
 
 
 class AuctionService:
