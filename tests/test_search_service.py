@@ -9,6 +9,7 @@ from app.services.search_service import SearchService
 from app.models.profile import Profile
 from app.models.card import Card
 from app.models.auction import Auction
+from app.models.notifications import Notification
 from sqlalchemy import or_
 
 @pytest.fixture
@@ -141,7 +142,7 @@ def test_search_auctions(search_service, mock_db):
     assert result[0]["HighestBid"] == 50.0
     assert result[0]["CardName"] == "TestCard1"
     assert result[0]["CardQuality"] == "Mint"
-    assert result[0]["ImageURL"] == "test_url.jpg"
+    assert result[0]["ImageURL"] == "/static/uploads/caebae50-6c65-4c6b-a7eb-2104a85ea75c_pokemoncard_test.png"
     
     # Verify method calls
     mock_db.query.assert_any_call(Auction)
