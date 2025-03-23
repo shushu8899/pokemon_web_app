@@ -30,8 +30,8 @@ class Notification(Base):
 class NotificationBase(BaseModel):
     review: str
 
-class CardInfo(NotificationBase):
+class NotificationInfo(NotificationBase):
     pass
 
-class CardResponse(NotificationBase):
+class NotificationResponse(NotificationBase):
     model_config = ConfigDict(from_attributes=True)

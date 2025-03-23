@@ -6,8 +6,9 @@ Card Table - Will contain all the card data
 
 from sqlalchemy import Column, Integer, VARCHAR, String, Boolean, ForeignKey
 from app.db.db import Base
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, field_validator, ConfigDict, Field
 from sqlalchemy.orm import relationship
+from typing import Optional
 
 
 class Card(Base):
@@ -20,21 +21,32 @@ class Card(Base):
     CardQuality = Column(String, nullable=False, default="UNDEFINED")
     CardName = Column(VARCHAR, nullable=False)
     IsValidated = Column(Boolean, nullable=False, default=False)
+    ImageURL = Column(String, nullable=True)  # Add ImageURL attribute
 
     profiles = relationship("Profile", back_populates="cards")
-    card_id_auctions = relationship("Auction", back_populates="card_id", foreign_keys="[Auction.CardID]") # Reference the card ID
-    seller_id_auction = relationship("Auction", back_populates="seller_id", foreign_keys="[Auction.SellerID]") # Reference to the seller
+    card_id_auctions = relationship("Auction", back_populates="card")  # Reference the card ID
 
 
 class CardBase(BaseModel):
-    review: str
+    CardID: int
+    CardName: str
+    CardQuality: str
+    OwnerID: int
+    IsValidated: bool
+    ImageURL: Optional[str]  # Add ImageURL to CardResponse
 
 
 class CardInfo(CardBase):
     pass
 
 
-class CardResponse(CardBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    book_id: int
+class CardResponse(BaseModel):
+    CardID: int
+    CardName: str
+    CardQuality: str
+    OwnerID: int
+    IsValidated: bool
+    ImageURL: Optional[str]  # Add ImageURL to CardResponse
+
+    class Config:
+        from_attributes = True  # Use the new configuration key

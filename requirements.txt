@@ -12,3 +12,6 @@ boto3==1.28.13
 python-jose==3.3.0
 langchain
 langchain_openai
+pytest
+bcrypt
+pytest-cov

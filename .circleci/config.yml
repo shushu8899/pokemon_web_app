@@ -1,0 +1,62 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
+      - run:
+          name: Set PYTHONPATH
+          command: |
+            echo "export PYTHONPATH=$(pwd)" >> ~/.bashrc
+            . ~/.bashrc
+      - run:
+          name: Run tests
+          command: |
+            . venv/bin/activate
+            pytest --cov=app --cov-branch --cov-report=html 2>&1 | tee test-results.log
+      - store_artifacts:
+          path: test-results.log
+
+  deploy:
+    docker:
+      - image: cimg/python:3.8  # Base image for deployment
+
+    steps:
+      - checkout  # Pull down your code
+      - setup_remote_docker
+
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -t kierenchua2023/modern-software-solutions:latest .
+
+      - run:
+          name: Log in to Docker Hub
+          command: |
+            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+
+      - run:
+          name: Push Docker Image to Docker Hub
+          command: |
+            docker push kierenchua2023/modern-software-solutions:latest
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
+      - deploy:
+          requires:
+              - test
+          filters:
+            branches:
+              only: 
+                - database-debugging
