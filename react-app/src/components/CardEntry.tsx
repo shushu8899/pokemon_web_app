@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import pokemonSpinner from "../assets/pokeballloading.gif";
 import { getAuthorizationHeader } from "../services/auth-service";
+import { getPresignedUrl, uploadToS3 } from "../services/card-service";
 import { useNavigate } from "react-router-dom";
 
 const CardEntry: React.FC = () => {
@@ -32,52 +33,6 @@ const CardEntry: React.FC = () => {
       setPreviewUrl(URL.createObjectURL(file)); 
     }
   };
-
-  const getPresignedUrl = async (file: File, authHeader: string) => {
-    const response = await fetch("http://127.0.0.1:8000/generate-presigned-url", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": authHeader, 
-      },
-      body: JSON.stringify({ filename: file.name }),
-    });
-  
-    if (!response.ok) {
-      throw new Error(`Failed to get pre-signed URL: ${response.statusText}`);
-    }
-  
-    const data = await response.json();
-    return data; // { upload_url, s3_url }
-  };
-  
-
-  const uploadToS3 = async (file: File, uploadUrl: string) => {
-    let retries = 3;
-  
-    while (retries > 0) {
-      try {
-        const response = await fetch(uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { 
-            "Content-Type": file.type,
-            "x-amz-acl": "public-read"
-          },
-        });
-  
-        if (!response.ok) {
-          throw new Error(`Failed to upload to S3: ${response.statusText}`);
-        }
-  
-        return; 
-      } catch (error) {
-        console.error(`Upload failed. Retries left: ${retries - 1}`, error);
-        retries -= 1;
-        if (retries === 0) throw error; // After 3 failed attempts, throw the error
-      }
-    }
-  };
   
 
 
@@ -101,10 +56,9 @@ const CardEntry: React.FC = () => {
         await uploadToS3(selectedFile, upload_url);
 
         s3ImageUrl = s3_url;
-        setPreviewUrl(s3ImageUrl); // Update preview URL to S3 URL
       }
 
-      const formData = new URLSearchParams();
+      const formData = new FormData();
       formData.append("card_name", cardName);
       formData.append("card_quality", cardQuality);
       if (s3ImageUrl) {
