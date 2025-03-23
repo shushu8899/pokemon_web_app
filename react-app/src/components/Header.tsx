@@ -46,9 +46,8 @@ const Header = () => {
           new Date(b.sent_date).getTime() - new Date(a.sent_date).getTime()
         );
         // Limit to 5 most recent notifications
-        const limitedNotifs = notifs.slice(0, 5);
-        console.log("Sorted notifications:", limitedNotifs);
-        setNotifications(limitedNotifs);
+        console.log("Sorted notifications:", notifs);
+        setNotifications(notifs);
         setUnreadCount(notifs.filter((n: Notification) => !n.is_read).length);
       } else {
         console.log("No notifications found in response:", response.data);
@@ -81,11 +80,7 @@ const Header = () => {
 
             if (incoming.message && incoming.sent_date) {
               const enriched = { ...incoming, is_read: false };
-              setNotifications((prev) => {
-                // Add new notification and limit to 5
-                const updated = [enriched, ...prev].slice(0, 5);
-                return updated;
-              });
+              setNotifications((prev) => [enriched, ...prev]);
               setUnreadCount((prev) => prev + 1);
               // Play notification sound or show toast if needed
             }
