@@ -257,7 +257,6 @@ const AuctionCreation: React.FC = () => {
                   required
                 />
                 <div className="text-sm text-gray-500 mt-1">
-                  <p>Maximum duration: 7 days (168 hours)</p>
                   <p>End Time: {calculateEndTime(Number(formData.auction_duration))}</p>
                 </div>
               </div>

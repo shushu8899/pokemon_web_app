@@ -84,13 +84,16 @@ const UnvalidatedCards: React.FC = () => {
         throw new Error('You must be logged in to verify cards');
       }
 
+      const formData = new FormData();
+      formData.append('pokemon_tcg_id', tcgCardId);
+
       const response = await axios.post(
         `${API_BASE_URL}/verification/verify-card/${selectedCard.CardID}`,
-        { pokemon_tcg_id: tcgCardId },
+        formData,
         {
           headers: {
             'Authorization': authHeader,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'multipart/form-data',
           },
         }
       );

@@ -19,9 +19,16 @@ export const getUnvalidatedCards = async (): Promise<UnvalidatedCard[]> => {
   }
 };
 
-export const verifyCard = async (cardId: number): Promise<{ message: string; card_id: number; is_validated: boolean }> => {
+export const verifyCard = async (cardId: number, pokemonTcgId: string): Promise<{ message: string; card_id: number; is_validated: boolean }> => {
   try {
-    const response = await api.post(`/verification/verify-card/${cardId}`);
+    const formData = new FormData();
+    formData.append('pokemon_tcg_id', pokemonTcgId);
+    
+    const response = await api.post(`/verification/verify-card/${cardId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   } catch (error: any) {
     console.error('Error verifying card:', error);
