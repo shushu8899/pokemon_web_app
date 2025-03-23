@@ -98,7 +98,7 @@ def authenticate_card(image_path, pokemon_name):
         uploaded_img = download_image_from_url(image_path)
         official_img = download_image_from_url(official_url)
 
-        if not official_img:
+        if official_img is None:
             return {
                 "message": "Verification failed",
                 "result": {
