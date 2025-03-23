@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../services/api";
 import { IoSend, IoChatbubbleEllipses, IoClose } from "react-icons/io5";
 
@@ -36,7 +36,7 @@ const formatMarkdown = (text: string): string => {
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/### (.*?)\n/g, '<h3 class="text-lg font-bold mt-3 mb-1">$1</h3>')
     .replace(/#### (.*?)\n/g, '<h4 class="text-md font-bold mt-2 mb-1">$1</h4>')
-    .replace(/\n/g, '<br/>');
+    .replace(/\n/g, '<div class="h-4"></div>');
 };
 
 const ChatAssistant: React.FC = () => {
@@ -44,6 +44,18 @@ const ChatAssistant: React.FC = () => {
   const [messages, setMessages] = useState<{ role: string; content: string; isHtml?: boolean }[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Add welcome message when chat is opened
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      const welcomeMessage = {
+        role: "bot",
+        content: "Hi! Please key in the Pokemon TCG Card ID of the Pokemon card that you're interested in and I will provide you the relevant info. You can obtain the Pokemon TCG Card ID from: <a href='https://pokemoncard.io/' target='_blank' rel='noopener noreferrer' class='text-blue-600 hover:text-blue-800'>pokemoncard.io</a>",
+        isHtml: true
+      };
+      setMessages([welcomeMessage]);
+    }
+  }, [isOpen]);
 
   const formatPokemonResponse = (data: PokemonResponse): { content: string; isHtml: boolean } => {
     if (!data || data.error) {
@@ -55,8 +67,20 @@ const ChatAssistant: React.FC = () => {
 
     // Return the formatted description if it exists
     if (data.description) {
+      // Format the description with bold variables
+      let formattedDescription = data.description
+        .replace(/\b(Fire|Water|Grass|Electric|Psychic|Fighting|Darkness|Metal|Dragon|Fairy)\b/g, '**$1**')
+        .replace(/\b(\d+)\s*HP\b/g, '**$1 HP**')
+        .replace(/\$(\d+\.?\d*)/g, '**$$$1**')
+        .replace(/\b(Basic|Stage 1|Stage 2|VMAX|VSTAR|V)\b/g, '**$1**')
+        .replace(/\b(Illustration Rare|Secret Rare|Ultra Rare|Rare|Uncommon|Common)\b/g, '**$1**')
+        .replace(/\b(\d+)\s*damage\b/g, '**$1 damage**')
+        .replace(/\b(\d+)\s*energy\b/g, '**$1 energy**')
+        .replace(/\b(Pokemon|Trainer|Supporter|Item|Stadium|Tool)\b/g, '**$1**')
+        .replace(/\b(\d{3})\b/g, '**$1**'); // Bold set numbers like 151
+
       return { 
-        content: formatMarkdown(data.description),
+        content: formatMarkdown(formattedDescription),
         isHtml: true 
       };
     }
@@ -108,8 +132,8 @@ const ChatAssistant: React.FC = () => {
 
     try {
       const response = await api.post("/rag/fetch", {
-        pokemon_name: input,
-        user_query: "Tell me about this Pokémon"
+        pokemon_id: input,
+        user_query: "Tell me about this Pokémon card"
       });
 
       const formattedContent = formatPokemonResponse(response.data);
@@ -118,21 +142,42 @@ const ChatAssistant: React.FC = () => {
         content: formattedContent.content,
         isHtml: formattedContent.isHtml 
       };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
+      
+      // Add follow-up message after the response
+      const followUpMessage = {
+        role: "bot",
+        content: "Is there anything else I can help with?",
+        isHtml: false
+      };
+
+      setMessages((prevMessages) => [...prevMessages, botMessage, followUpMessage]);
     } catch (error: any) {
       console.error("Error:", error);
       let errorMessage = "Sorry, I encountered an error. Please try again.";
       
-      if (error.response?.status === 429 || 
+      if (error.response?.status === 422) {
+        errorMessage = "Invalid Pokemon TCG Card ID format. Please check the ID and try again.";
+      } else if (error.response?.status === 429 || 
           (error.response?.data?.detail && error.response?.data?.detail.includes("rate limit"))) {
         errorMessage = "I'm getting too many requests right now. Please wait a moment and try again.";
+      } else if (error.response?.status === 404) {
+        errorMessage = "Card not found. Please check the Pokemon TCG Card ID and try again.";
       }
       
-      setMessages((prevMessages) => [...prevMessages, { 
+      const errorBotMessage = { 
         role: "bot", 
         content: errorMessage,
         isHtml: false
-      }]);
+      };
+
+      // Add follow-up message after error
+      const followUpMessage = {
+        role: "bot",
+        content: "Is there anything else I can help with?",
+        isHtml: false
+      };
+
+      setMessages((prevMessages) => [...prevMessages, errorBotMessage, followUpMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -182,7 +227,7 @@ const ChatAssistant: React.FC = () => {
                 {msg.isHtml ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: msg.content }}
-                    className="prose prose-sm max-w-none [&_br]:leading-[1.0] [&_br]:content-[''] [&_br]:block [&_br]:mt-0"
+                    className="prose prose-sm max-w-none [&_div.h-4]:h-4 [&_div.h-4]:w-full"
                   />
                 ) : (
                   msg.content
@@ -204,7 +249,7 @@ const ChatAssistant: React.FC = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask about Pokemon..."
+              placeholder="Key in Pokemon TCG Card ID..."
               disabled={isLoading}
             />
             <button
