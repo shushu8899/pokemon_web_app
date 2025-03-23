@@ -19,16 +19,16 @@ CognitoAdminRole = os.getenv("COGNITO_ADMIN_ROLE", "Admins")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 print("COGNITO_REGION:", os.getenv("COGNITO_REGION"))
-print("COGNITO_USER_POOL_ID:", os.getenv("COGNITO_USER_POOL_ID1"))
-print("COGNITO_CLIENT_ID:", os.getenv("COGNITO_CLIENT_ID1"))
-print("COGNITO_CLIENT_SECRET:", os.getenv("COGNITO_CLIENT_SECRET1"))
+print("COGNITO_USER_POOL_ID:", os.getenv("COGNITO_USER_POOL_ID"))
+print("COGNITO_CLIENT_ID:", os.getenv("COGNITO_CLIENT_ID"))
+print("COGNITO_CLIENT_SECRET:", os.getenv("COGNITO_CLIENT_SECRET"))
 
 class CognitoService:
     def __init__(self):
         self.region = os.getenv("COGNITO_REGION")
-        self.user_pool_id = os.getenv("COGNITO_USER_POOL_ID1")
-        self.client_id = os.getenv("COGNITO_CLIENT_ID1")
-        self.client_secret = os.getenv("COGNITO_CLIENT_SECRET1")
+        self.user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
+        self.client_id = os.getenv("COGNITO_CLIENT_ID")
+        self.client_secret = os.getenv("COGNITO_CLIENT_SECRET")
         self.aws_access_key = os.getenv("AWS_ACCESS_KEY") #created aws access key for list users API method
         self.aws_secret_key = os.getenv("AWS_SECRET_KEY") #created aws secret key for list users API method
 
