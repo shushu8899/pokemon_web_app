@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import requests
 from app.exceptions import ServiceException
 from dotenv import load_dotenv
+from botocore.exceptions import ClientError
 
 load_dotenv()
 
@@ -159,14 +160,26 @@ class CognitoService:
                 "refresh_token": response["AuthenticationResult"]["RefreshToken"]
             }
 
-        except self.client.exceptions.NotAuthorizedException: #based on response documentation for initiate_auth errors
-            raise ServiceException(status_code=401, detail="Invalid email or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
-        except self.client.exceptions.UserNotConfirmedException:
-            raise ServiceException(status_code=403, detail="User account not confirmed.")
-        except self.client.exceptions.UserNotFoundException:
-            raise ServiceException(status_code=404, detail="User account doesnt exist.")
-        except Exception as e:
-            raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
+        # updated exception handling to the below due to unit testing script:
+        # except self.client.exceptions.NotAuthorizedException: #based on response documentation for initiate_auth errors
+        #     raise ServiceException(status_code=401, detail="Invalid email or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
+        # except self.client.exceptions.UserNotConfirmedException:
+        #     raise ServiceException(status_code=403, detail="User account not confirmed.")
+        # except self.client.exceptions.UserNotFoundException:
+        #     raise ServiceException(status_code=404, detail="User account doesnt exist.")
+        # except Exception as e:
+        #     raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
+        
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == 'NotAuthorizedException':
+                raise ServiceException(status_code=401, detail="Invalid email or password.")
+            elif error_code == 'UserNotConfirmedException':
+                raise ServiceException(status_code=403, detail="User account not confirmed.")
+            elif error_code == 'UserNotFoundException':
+                raise ServiceException(status_code=404, detail="User account doesn't exist.")
+            else:
+                raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")   
 
 # -------------------------- End of update -----------------------------------------------------------------------------
 
