@@ -8,6 +8,7 @@ from app.dependencies.auth import req_user_or_admin
 from app.services.profile_service import get_current_user
 from app.models.profile import Profile
 
+
 router = APIRouter()
 
 @router.post("/verify-card/{card_id}", dependencies=[Depends(req_user_or_admin)])
@@ -42,8 +43,8 @@ async def verify_card(
     if card.OwnerID != owner_id and user_role.lower() != "admin":
         raise HTTPException(status_code=403, detail="You can only verify your own cards.")
 
-    # Convert ImageURL to Full File Path
-    image_path = os.path.join(os.getcwd(), card.ImageURL.strip("/"))
+    # get image_path
+    image_path = card.ImageURL
 
     # Run AI-based verification
     verification_result = authenticate_card(image_path, pokemon_tcg_id)

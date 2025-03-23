@@ -12,13 +12,10 @@ from app.models.notifications import Notification
 from app.services.profile_service import ProfileService
 from datetime import datetime, timedelta
 from fastapi import HTTPException, BackgroundTasks, UploadFile
-import os
-import shutil
-import uuid
-import logging
 from typing import Union
 from app.exceptions import ServiceException
 from app.services.websocket_manager import websocket_manager
+
 
 class AuctionService:
     def __init__(self, db: Session):

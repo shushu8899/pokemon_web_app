@@ -2,17 +2,19 @@ import React, { useState } from "react";
 import axios from "axios";
 import pokemonSpinner from "../assets/pokeballloading.gif";
 import { getAuthorizationHeader } from "../services/auth-service";
+import { getPresignedUrl, uploadToS3 } from "../services/card-service";
 import { useNavigate } from "react-router-dom";
 
 const CardEntry: React.FC = () => {
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cardName, setCardName] = useState<string>("");
   const [cardQuality, setCardQuality] = useState<string>("MINT");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -28,9 +30,11 @@ const CardEntry: React.FC = () => {
         return;
       }
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      setPreviewUrl(URL.createObjectURL(file)); 
     }
   };
+  
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,17 +42,27 @@ const CardEntry: React.FC = () => {
     setError(null);
     setSuccessMessage(null);
 
-    const formData = new FormData();
-    formData.append("card_name", cardName);
-    formData.append("card_quality", cardQuality);
-    if (selectedFile) {
-      formData.append("image", selectedFile);
-    }
-
     try {
       const authHeader = getAuthorizationHeader();
       if (!authHeader) {
         throw new Error('You must be logged in to create a card entry');
+      }
+
+      let s3ImageUrl = null;
+
+      if (selectedFile) {
+        const { upload_url, s3_url } = await getPresignedUrl(selectedFile, authHeader);
+
+        await uploadToS3(selectedFile, upload_url);
+
+        s3ImageUrl = s3_url;
+      }
+
+      const formData = new FormData();
+      formData.append("card_name", cardName);
+      formData.append("card_quality", cardQuality);
+      if (s3ImageUrl) {
+        formData.append("image_url", s3ImageUrl);
       }
 
       await axios.post(
@@ -57,7 +71,7 @@ const CardEntry: React.FC = () => {
         {
           headers: {
             'Authorization': authHeader,
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': "application/x-www-form-urlencoded",
           },
         }
       );
@@ -67,7 +81,6 @@ const CardEntry: React.FC = () => {
       setCardName("");
       setCardQuality("MINT");
       setSelectedFile(null);
-      setPreviewUrl(null);
       
       // Redirect to My Cards page after successful creation
       setTimeout(() => {

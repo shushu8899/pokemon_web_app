@@ -32,10 +32,7 @@ function ConfirmRegistrationPage() {
     setError(null);
 
     try {
-      await axios.post(`http://localhost:8000/confirmation`, {
-        email,
-        confirmation_code: verificationCode
-      });
+      await axios.post(`http://localhost:8000/confirmation?email=${encodeURIComponent(email)}&confirmation_code=${encodeURIComponent(verificationCode)}`);
       
       setSuccess('Email verified successfully! Redirecting to login...');
       setTimeout(() => {

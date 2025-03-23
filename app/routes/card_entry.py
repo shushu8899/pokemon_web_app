@@ -10,6 +10,10 @@ from app.dependencies.auth import req_user_or_admin
 from app.services.profile_service import get_current_user
 from typing import List
 from app.models.auction import Auction
+from urllib.parse import urlparse
+from app.services.s3_service import s3 
+from pydantic import BaseModel
+import logging
 from datetime import datetime, timezone
 from app.models.notifications import Notification
 from app.services.websocket_manager import websocket_manager
@@ -18,14 +22,26 @@ import json
 
 router = APIRouter()
 
-UPLOAD_DIR = "static/uploads/"
-os.makedirs(UPLOAD_DIR, exist_ok=True)  # Ensure upload directory exists
+class PresignedUrlRequest(BaseModel):
+    filename: str
+ 
+@router.post("/generate-presigned-url", dependencies=[Depends(req_user_or_admin)])
+async def generate_presigned_url(
+    request: PresignedUrlRequest,
+    db: Session = Depends(get_db),
+    auth_info: dict = Depends(get_current_user)
+):
+    """
+    API route to generate a pre-signed URL for S3 file upload.
+    """
+    logging.info("Generating pre-signed URL")
+    return s3.generate_presigned_url(request.filename, db, auth_info)
 
 @router.post("/card-entry/create", dependencies=[Depends(req_user_or_admin)])
 async def create_card_entry(
     card_name: str = Form(...),
     card_quality: str = Form(...),
-    image: UploadFile = File(...),
+    image_url: str = Form(...), 
     db: Session = Depends(get_db),
     auth_info: dict = Depends(get_current_user)
 ):
@@ -41,17 +57,11 @@ async def create_card_entry(
 
     owner_id = user_profile.UserID
 
-
-    # Generate a unique filename for the image
-    unique_filename = f"{uuid.uuid4()}_{image.filename}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    # Check if card already exists for this user
+    existing_card = db.query(Card).filter(Card.CardName.ilike(card_name), Card.OwnerID == owner_id).first()
+    if existing_card:
+        raise HTTPException(status_code=400, detail="Card already exists for this user")
     
-    # Save Image to Upload Directory
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
-
-    image_url = f"/static/uploads/{unique_filename}"
-
     # Create a new card entry
     new_card = Card(
         OwnerID=owner_id,
@@ -109,7 +119,7 @@ async def update_card_entry(
     card_id: int = Form(...),
     card_name: str = Form(...),
     card_quality: str = Form(...),
-    image: UploadFile = File(None),
+    image_url: str = Form(...), 
     db: Session = Depends(get_db),
     auth_info: dict = Depends(get_current_user)
 ):
@@ -132,25 +142,9 @@ async def update_card_entry(
         raise HTTPException(status_code=404, detail="Card not found for this user")
 
     # Update image only if a new one is provided
-    if image:
-        # Generate a unique filename for the image
-        unique_filename = f"{uuid.uuid4()}_{image.filename}"
-        file_path = os.path.join(UPLOAD_DIR, unique_filename)
-        
-        # Save Image to Upload Directory
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-        # Delete old image if it exists
-        if existing_card.ImageURL and existing_card.ImageURL.startswith("/static/uploads/"):
-            old_image_path = os.path.join("static", "uploads", os.path.basename(existing_card.ImageURL))
-            try:
-                if os.path.exists(old_image_path):
-                    os.remove(old_image_path)
-            except Exception as e:
-                print(f"Error deleting old image file: {e}")
-
-        existing_card.ImageURL = f"/static/uploads/{unique_filename}"
+    if image_url:
+        s3.delete_image(existing_card)
+        existing_card.ImageURL = image_url
 
     # Update the card details
     existing_card.CardName = card_name
@@ -163,7 +157,7 @@ async def update_card_entry(
         "message": "Card updated successfully",
         "card_id": existing_card.CardID,
         "updated_image_url": existing_card.ImageURL,
-        "is_validated": existing_card.IsValidated
+        "is_validated": existing_card.IsValidated,
     }
 
 @router.get("/my-cards", dependencies=[Depends(req_user_or_admin)])
