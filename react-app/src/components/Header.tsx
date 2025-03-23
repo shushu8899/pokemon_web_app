@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Logo from "../assets/logo.svg.png";
 import { navigation, NAV_LINKS, PUBLIC_ROUTES, PROTECTED_ROUTES } from "../constants";
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ const Header = () => {
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
     try {
@@ -125,6 +126,20 @@ const Header = () => {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
+
+  // Add click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleBellClick = async () => {
     setShowNotifications(!showNotifications);
@@ -243,17 +258,26 @@ const Header = () => {
               </div>
 
               {/* Notification Bell */}
-              <div className="relative">
-                <button 
+              <div style={{ position: 'relative' }} ref={notificationRef}>
+                <button
                   onClick={handleBellClick}
-                  className="w-12 py-2 text-gray-500 font-bold transition-colors hover:text-[#0908ba] focus:outline-none"
-                  style={{ borderRadius: "100px" }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.5rem',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#6B7280'
+                  }}
                 >
                   <svg 
-                    className="w-4 h-4 mx-auto" 
+                    className="w-6 h-6" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
+                    style={{ width: '1rem', height: '1rem' }}
                   >
                     <path 
                       strokeLinecap="round" 
@@ -263,39 +287,82 @@ const Header = () => {
                     />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                    <span style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      backgroundColor: 'red',
+                      color: 'white',
+                      borderRadius: '50%',
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.8rem',
+                      minWidth: '1.2rem',
+                      textAlign: 'center'
+                    }}>
                       {unreadCount}
                     </span>
                   )}
                 </button>
 
-                {/* Notification Dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50">
-                    <div className="p-4 border-b">
-                      <h3 className="text-lg font-semibold">Notifications</h3>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          No notifications
-                        </div>
-                      ) : (
-                        notifications.map((notification) => (
-                          <div
-                            key={notification.notification_id}
-                            className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                              !notification.is_read ? 'bg-blue-50' : ''
-                            }`}
-                          >
-                            <p className="text-sm text-gray-800">{notification.message}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(notification.sent_date).toLocaleString()}
-                            </p>
-                          </div>
-                        ))
+                  <div style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    backgroundColor: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    width: '300px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    zIndex: 1000
+                  }}>
+                    <div style={{
+                      padding: '1rem',
+                      borderBottom: '1px solid #eee',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <h3 style={{ margin: 0 }}>Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleBellClick}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#007bff',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem'
+                          }}
+                        >
+                          Mark all as read
+                        </button>
                       )}
                     </div>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+                        No notifications
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.notification_id}
+                          style={{
+                            padding: '1rem',
+                            borderBottom: '1px solid #eee',
+                            cursor: 'pointer',
+                            backgroundColor: notification.is_read ? 'white' : '#f8f9fa'
+                          }}
+                        >
+                          <div style={{ marginBottom: '0.5rem' }}>{notification.message}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                            {new Date(notification.sent_date).toLocaleString()}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
