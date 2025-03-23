@@ -6,6 +6,18 @@ import { useAuth } from '../context/AuthContext';
 import axios from "axios";
 import { getAuthorizationHeader } from '../services/auth-service';
 
+// Add CSS for animations
+const toastAnimations = `
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-20px); }
+}
+`;
+
 interface Notification {
   notification_id: number;
   auction_id: number | null;
@@ -23,6 +35,10 @@ const Header = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef<HTMLDivElement>(null);
+  
+  // Toast notification state
+  const [toastNotification, setToastNotification] = useState<Notification | null>(null);
+  const [showToast, setShowToast] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -70,24 +86,33 @@ const Header = () => {
         const ws = new WebSocket(`ws://localhost:8000/ws?email=${user.email}`);
 
         ws.onopen = () => {
-          console.log("✅ WebSocket connected");
+          console.log("WebSocket connected");
           setWebsocket(ws);
         };
 
         ws.onmessage = (event) => {
           try {
             const incoming = JSON.parse(event.data);
-            console.log("🔔 Incoming WS message:", incoming);
+            console.log("Incoming WS message:", incoming);
 
             if (incoming.message && incoming.sent_date) {
               const enriched = { ...incoming, is_read: false };
+              
+              // Set as toast notification and show it
+              setToastNotification(enriched);
+              setShowToast(true);
+              
+              // Auto-dismiss toast after 5 seconds
+              setTimeout(() => {
+                setShowToast(false);
+              }, 5000);
+              
               setNotifications((prev) => {
                 // Add new notification and limit to 5
                 const updated = [enriched, ...prev].slice(0, 5);
                 return updated;
               });
               setUnreadCount((prev) => prev + 1);
-              // Play notification sound or show toast if needed
             }
           } catch (error) {
             console.error("Error processing WebSocket message:", error);
@@ -102,7 +127,7 @@ const Header = () => {
         };
 
         ws.onerror = (error) => {
-          console.error("❌ WebSocket error:", error);
+          console.error(" WebSocket error:", error);
         };
 
         return ws;
@@ -174,7 +199,51 @@ const Header = () => {
   };
 
   return (
-    <div className="fixed z-50 w-full">
+    <div className="fixed z-100 w-full">
+      {/* Style tag for animations */}
+      <style>{toastAnimations}</style>
+      
+      {/* Toast Notification */}
+      {showToast && toastNotification && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '80px', // Position below the header
+            right: '20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            padding: '15px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 99,
+            maxWidth: '300px',
+            animation: 'fadeIn 0.3s, fadeOut 0.3s 4.7s',
+          }}
+        >
+          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>New Notification</div>
+          <div>{toastNotification.message}</div>
+          <div style={{ fontSize: '0.8rem', marginTop: '8px', opacity: 0.8 }}>
+            {new Date(toastNotification.sent_date).toLocaleString()}
+          </div>
+          <button
+            onClick={() => setShowToast(false)}
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              fontSize: '16px',
+              cursor: 'pointer',
+              padding: '0',
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+      
       <div className="flex items-center px-5 lg:px-7.5 xl:px-10 max-lg:px-4 h-18 shadow-lg bg-white">
         <Link to="/" className="block w-[12rem]">
           <img src={Logo} alt="Pokemonlogo" width={150} height={100} />
@@ -308,15 +377,15 @@ const Header = () => {
                   <div style={{
                     position: 'absolute',
                     right: 0,
-                    top: '100%',
+                    top: 'calc(100% + 25px)',
                     backgroundColor: 'white',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
                     width: '300px',
                     maxHeight: '400px',
                     overflowY: 'auto',
-                    zIndex: 1000
+                    zIndex: 50
                   }}>
                     <div style={{
                       padding: '1rem',
@@ -325,7 +394,7 @@ const Header = () => {
                       justifyContent: 'space-between',
                       alignItems: 'center'
                     }}>
-                      <h3 style={{ margin: 0 }}>Notifications</h3>
+                      <h3 style={{ margin: 0, fontWeight: 'bold' }}>Notifications</h3>
                       {unreadCount > 0 && (
                         <button
                           onClick={handleBellClick}

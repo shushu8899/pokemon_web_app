@@ -18,7 +18,7 @@ class PokemonRagService:
         self.base_delay = 1  # Base delay in seconds
 
         if not os.getenv("OPENAI_API_KEY"):
-            raise ValueError("❌ OPENAI_API_KEY is missing! Set it in the environment.")
+            raise ValueError("Missing API key. Please set OPENAI_API_KEY in the environment.")
 
         self.llm = ChatOpenAI(model_name="gpt-4", temperature=0)
         self.chroma_service = ChromaService()
@@ -145,7 +145,7 @@ User question:
 Answer:
 """
 
-                # 🔥 Call LLM
+                # Call LLM
                 response = self.llm.invoke(prompt)
                 return response.content.strip()
 
