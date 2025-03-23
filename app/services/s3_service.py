@@ -71,7 +71,6 @@ class S3UploadService:
                     "Bucket": BUCKET_NAME,
                     "Key": object_key,
                     "ContentType": file_type,
-                    'ACL': 'public-read'  # Makes the file publicly accessible
                 },
                 ExpiresIn=3600
             )

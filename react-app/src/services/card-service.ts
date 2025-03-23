@@ -57,7 +57,7 @@ export const uploadToS3 = async (file: File, uploadUrl: string) => {
         method: "PUT",
         body: file,
         headers: { 
-          "Content-Type": file.type,
+          "Content-Type": decodeURIComponent(file.type),
         },
       });
 
