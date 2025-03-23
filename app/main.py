@@ -70,7 +70,7 @@ app.include_router(card_verification.router, prefix="/verification", tags=["Veri
 app.include_router(seller_submission.router, prefix="/auction", tags=["Submission"])
 app.include_router(auction_page.router, prefix="/bidding", tags=["Auction Page"])
 app.include_router(profile_rating.router, prefix="/profile", tags=["Rate the Seller"])
-app.include_router(search.router, prefix="/api", tags=["Search"])
+app.include_router(search.router, prefix="", tags=["Search"])
 app.include_router(chroma.router, prefix="/rag", tags=["RAG"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(profile.router, tags=["Profile"])

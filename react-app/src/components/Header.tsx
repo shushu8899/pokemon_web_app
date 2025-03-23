@@ -14,7 +14,7 @@ const Header = () => {
   };
 
   return (
-    <div className="fixed z-50 w-full bg-white">
+    <div className="fixed z-50 w-full">
       <div className="flex items-center px-5 lg:px-7.5 xl:px-10 max-lg:px-4 h-18 shadow-lg bg-white">
         <Link to="/" className="block w-[12rem]">
           <img src={Logo} alt="Pokemonlogo" width={150} height={100} />

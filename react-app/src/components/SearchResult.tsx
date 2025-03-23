@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import surprisedPikachu from "../assets/surprisedPikachu.png";
 
 interface SearchResult {
@@ -7,10 +8,12 @@ interface SearchResult {
   CardName?: string;
   CardQuality?: string;
   Username?: string;
-  CurrentRating?: string;
   Email?: string;
+  UserID?: string;
+  NumberOfRating?: number;
+  CurrentRating?: number;
   AuctionID?: string;
-  AuctionStatus?: string;
+  ImageURL?: string;
 }
 
 interface SearchResultsProps {
@@ -19,6 +22,28 @@ interface SearchResultsProps {
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed }) => {
+  console.log('SearchResults received:', { results, searchPerformed });
+  
+  // Log card-specific results for debugging
+  const cardResults = results.filter(result => 
+    result._table && result._table.toLowerCase().includes('card')
+  );
+  console.log('Card results:', cardResults);
+  
+  // Function to construct proper image URL
+  const getImageUrl = (imageUrl: string | undefined): string => {
+    if (!imageUrl) return '';
+    
+    const url = imageUrl.startsWith('http') 
+      ? imageUrl 
+      : imageUrl.startsWith('/') 
+        ? `http://127.0.0.1:8000${imageUrl}`
+        : `http://127.0.0.1:8000/${imageUrl}`;
+    
+    console.log(`Original URL: ${imageUrl}, Constructed URL: ${url}`);
+    return url;
+  };
+  
   // Handle empty results
   if (searchPerformed && results.length === 0) {
     return (
@@ -44,28 +69,79 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, searchPerformed 
   return (
     <div className="py-8">
       {tableNames.map(tableName => (
-        <div key={tableName} 
-        className="mb-6 p-4 flex mx-8 md:mx-10 font-roboto"
-        style={{ 
-          borderRadius: "50px", 
-          boxShadow: "10px 10px 6px rgba(105, 105, 104, 0.5)", 
-          backgroundColor: "#FFCB05",}}
-        >
-          <h2 className="text-xl capitalize mb-2 px-8 bold-text">{tableName} Results</h2>
-          <ul className="space-y-2">
-            {groupedResults[tableName].map(result => (
-              <li key={result.id} className="py-2">
-                {/* Display all properties of the result */}
-                {Object.entries(result).map(([key, value]) => (
-                  key !== '_table' && (
-                    <p key={key}>
-                      <strong>{key}:</strong> {value}
-                    </p>
-                  )
-                ))}
-              </li>
-            ))}
-          </ul>
+        <div key={tableName} className="mb-6 mx-8 md:mx-10">
+          <h2 className="text-xl capitalize mb-4 px-2 font-bold">{tableName} Results</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {groupedResults[tableName].map(result => {
+              // Create appropriate link based on table type
+              const content = (
+                <div 
+                  className="p-4 rounded-lg shadow-lg bg-white hover:bg-yellow-400 transition-colors cursor-pointer"
+                  style={{ 
+                    borderRadius: "15px",
+                    boxShadow: "5px 5px 4px rgba(105, 105, 104, 0.5)"
+                  }}
+                >
+                  {/* Display card image if available and is a card result */}
+                  {tableName.toLowerCase().includes('card') && (
+                    <div className="mb-3 flex justify-center">
+                      {result.ImageURL ? (
+                        <>
+                          <img 
+                            src={getImageUrl(result.ImageURL)}
+                            alt={result.CardName || "Pokemon Card"} 
+                            className="w-full max-w-[200px] rounded-lg"
+                            onError={(e) => {
+                              console.error(`Failed to load image: ${result.ImageURL}, URL attempted: ${getImageUrl(result.ImageURL)}`);
+                              e.currentTarget.src = surprisedPikachu; // Fallback image
+                            }}
+                          />
+                          {/* Hidden debug info */ }
+                          <div className="hidden">
+                            Image Path: {result.ImageURL}<br/>
+                            Processed URL: {getImageUrl(result.ImageURL)}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full max-w-[200px] h-[200px] bg-gray-200 rounded-lg flex items-center justify-center">
+                          <p className="text-gray-500">No image available</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Display all properties of the result */}
+                  {Object.entries(result).map(([key, value]) => (
+                    key !== '_table' && key !== 'ImageURL' && (
+                      <p key={key} className="py-1">
+                        <strong>{key}:</strong> {value}
+                      </p>
+                    )
+                  ))}
+                </div>
+              );
+
+              // Wrap with appropriate link based on table type
+              if (tableName.toLowerCase().includes('card')) {
+                return (
+                  <Link key={result.id} to={`/bid-details/${result.AuctionID}`}>
+                    {content}
+                  </Link>
+                );
+              } else if (tableName.toLowerCase().includes('profile') || tableName.toLowerCase().includes('user')) {
+                return (
+                  <Link key={result.id} to={`/profile/${result.Username}`} className="block">
+                    <div className="p-4 rounded-lg shadow-lg bg-yellow-400 hover:bg-yellow-500 transition-colors">
+                      <h3 className="text-xl font-semibold mb-2">{result.Username}</h3>
+                      <p><strong>Rating:</strong> {result.CurrentRating || 0} ({result.NumberOfRating || 0} ratings)</p>
+                    </div>
+                  </Link>
+                );
+              } else {
+                return <div key={result.id}>{content}</div>;
+              }
+            })}
+          </div>
         </div>
       ))}
     </div>

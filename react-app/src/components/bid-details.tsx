@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAuthorizationHeader } from '../services/auth-service';
@@ -142,7 +142,7 @@ const CountdownTimer: React.FC<{ endTime: number }> = ({ endTime }) => {
         <div style={{ 
             padding: '10px',
             borderRadius: '8px',
-            backgroundColor: isExpired ? '#dc2626' : '#FFCB05',
+            backgroundColor: isExpired ? '#dc2626' : '#d0f3dd',
             color: isExpired ? 'white' : 'black',
             display: 'inline-block',
             fontWeight: 'bold',
@@ -325,9 +325,19 @@ const BidDetails: React.FC = () => {
 
     return (
         <div style={styles.container}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-                Bid Details
-            </h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
+                    Bid Details
+                </h1>
+                
+                {/* Time Remaining moved to top right */}
+                {bidDetails && (
+                    <div style={{ textAlign: 'right' }}>
+                        <p style={{ margin: 0, fontWeight: 'bold', marginBottom: '5px' }}>Time Remaining:</p>
+                        <CountdownTimer endTime={bidDetails.EndTime} />
+                    </div>
+                )}
+            </div>
 
             <div style={styles.content}>
                 {/* Left side - Card Image */}
@@ -362,8 +372,6 @@ const BidDetails: React.FC = () => {
                         <p><strong>Highest Bidder:</strong> {bidDetails.HighestBidderUsername || 'No bids yet'}</p>
                         <p><strong>Minimum Increment:</strong> ${bidDetails.MinimumIncrement}</p>
                         <p><strong>End Time:</strong> {new Date(bidDetails.EndTime * 1000).toLocaleString()}</p>
-                        <p><strong>Time Remaining:</strong></p>
-                        <CountdownTimer endTime={bidDetails.EndTime} />
                     </div>
 
                     <button 
@@ -383,6 +391,21 @@ const BidDetails: React.FC = () => {
                     >
                         {new Date().getTime() > bidDetails.EndTime * 1000 ? 'Auction Ended' : 'Place Bid'}
                     </button>
+                    
+                    {/* Seller Profile Link Button */}
+                    <Link 
+                        to={`/profile/${bidDetails.SellerUsername}`}
+                        style={{
+                            ...styles.bidButton,
+                            backgroundColor: '#dddddc',
+                            color: 'black',
+                            marginTop: '10px',
+                            display: 'block',
+                            textAlign: 'center',
+                        }}
+                    >
+                        View Seller Profile
+                    </Link>
                 </div>
             </div>
 

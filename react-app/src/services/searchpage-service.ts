@@ -46,21 +46,29 @@ interface SearchResult {
   id: string;
   CardName?: string;
   Username?: string;
-  CurrentRating?: string;
   Email?: string;
-  _table?: string; // Add table information
+  UserID?: string;
+  NumberOfRating?: number;
+  CurrentRating?: number;
+  _table?: string;
+  CardQuality?: string;
+  AuctionID?: string;
+  AuctionStatus?: string;
+  ImageURL?: string;
 }
 
 const BASE_URL = "http://127.0.0.1:8000";
 
 export const fetchSearchResults = async (
   query: string,
-  setResults: (results: SearchResult[]) => void
-  // setLoading: (loading: boolean) => void
+  setResults: (results: SearchResult[]) => void,
+  setLoading: (loading: boolean) => void
 ) => {
-  // setLoading(true);
+  setLoading(true);
   try {
+    console.log('Making API request to:', `${BASE_URL}/search/all?query=${encodeURIComponent(query)}`);
     const response = await axios.get(`${BASE_URL}/search/all?query=${encodeURIComponent(query)}`);
+    console.log('API Response:', response.data);
 
     if (response.status !== 200) {
       throw new Error(`Server responded with status ${response.status}`);
@@ -69,23 +77,38 @@ export const fetchSearchResults = async (
     const allResults: SearchResult[] = [];
 
     if (response.data && typeof response.data.results === "object") {
+      // Log raw profile data for debugging
+      if (response.data.results.profile) {
+        console.log('Raw profile data:', response.data.results.profile);
+      }
+
       Object.entries(response.data.results).forEach(([tableName, tableResults]) => {
         if (Array.isArray(tableResults)) {
           allResults.push(
-            ...tableResults.map((result: any) => ({
-              ...result,
-              _table: tableName, // Keep track of which table the result came from
-            }))
+            ...tableResults.map((result: any) => {
+              // Process special fields
+              const processedResult = {
+                ...result,
+                _table: tableName,
+                // Ensure numeric fields are properly typed
+                NumberOfRating: typeof result.NumberOfRating === 'string' ? parseInt(result.NumberOfRating) : result.NumberOfRating,
+                CurrentRating: typeof result.CurrentRating === 'string' ? parseFloat(result.CurrentRating) : result.CurrentRating
+              };
+              
+              console.log(`Processing ${tableName} result:`, processedResult);
+              return processedResult;
+            })
           );
         }
       });
     }
 
+    console.log('Final processed results:', allResults);
     setResults(allResults);
   } catch (error) {
     console.error("Error fetching search results:", error);
     setResults([]);
-  // } finally {
-  //   setLoading(false);
+  } finally {
+    setLoading(false);
   }
 };

@@ -197,9 +197,9 @@ const ChatAssistant: React.FC = () => {
           </div>
 
           {/* Input Box */}
-          <div className="p-2 border-t flex">
+          <div className="p-2 border border-gray-300 flex">
             <input
-              className="flex-grow p-2 border rounded-l-lg focus:outline-none"
+              className="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none"
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}

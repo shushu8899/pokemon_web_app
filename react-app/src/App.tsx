@@ -27,6 +27,7 @@ import Profile from './components/Profile';
 import CardEntry from "./components/CardEntry";
 import UnvalidatedCards from './components/UnvalidatedCards';
 import ConfirmRegistrationPage from './components/ConfirmRegistrationPage';
+import ProfilePage from './components/ProfilePage';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -52,7 +53,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen">
         <Header />
         {/* Spacer for fixed navbar */}
         <div className="h-16"></div>
@@ -106,6 +107,7 @@ function App() {
           <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
           <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/profile/:username" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/bid-details/:auctionID" element={<ProtectedRoute><BidDetails /></ProtectedRoute>} />
           
           {/* Catch-all redirect to home */}
