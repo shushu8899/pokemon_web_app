@@ -10,6 +10,9 @@ class PokemonRagService:
     def __init__(self):
         self.pokemon_api_url = "https://api.pokemontcg.io/v2/cards"
         self.pokemon_api_key = os.getenv("POKEMON_TCG_API_KEY")
+
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        print(f"OPENAI_API_KEY in constructor: {openai_api_key}")
         
         # ✅ OpenAI API Key is automatically handled by LangChain
         if not os.getenv("OPENAI_API_KEY"):
