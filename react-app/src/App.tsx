@@ -9,12 +9,14 @@ import { clearAuthTokens, getUserEmail, isAuthenticated } from './services/auth-
 // Components
 import Header from "./components/Header";
 import AuctionList from "./components/list-grp";
-import BiddingPage from "./components/auction-details";
+import ChatAssistant from "./components/ChatAssistant";
+import BidDetails from "./components/bid-details";
 import SearchPage from "./components/SearchPage";
 import UploadCard from "./components/verify-card";
 import AuctionCreation from "./components/AuctionCreation";
 import MyCards from "./components/MyCards";
 import MyAuctions from "./components/MyAuctions";
+import WinningAuctionsPage from "./components/WinningAuctionsPage";
 import AuctionDetails from './components/AuctionDetails';
 import LoginPage from "./components/LoginPage";
 import RegistrationPage from "./components/RegistrationPage";
@@ -25,6 +27,7 @@ import Profile from './components/Profile';
 import CardEntry from "./components/CardEntry";
 import UnvalidatedCards from './components/UnvalidatedCards';
 import ConfirmRegistrationPage from './components/ConfirmRegistrationPage';
+import ProfilePage from './components/ProfilePage';
 
 // Services
 import { fetchSearchResults } from "./services/searchpage-service";
@@ -38,8 +41,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   
+  // If not authenticated, redirect to login page
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Save the attempted URL for redirect after login
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return <>{children}</>;
@@ -48,7 +53,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen">
         <Header />
         {/* Spacer for fixed navbar */}
         <div className="h-16"></div>
@@ -98,14 +103,18 @@ function App() {
           <Route path="/my-cards" element={<ProtectedRoute><MyCards /></ProtectedRoute>} />
           <Route path="/entry/card-entry/update" element={<ProtectedRoute><EditCard /></ProtectedRoute>} />
           <Route path="/my-auctions" element={<ProtectedRoute><MyAuctions /></ProtectedRoute>} />
+          <Route path="/winning-auctions" element={<ProtectedRoute><WinningAuctionsPage /></ProtectedRoute>} />
           <Route path="/create-auction" element={<ProtectedRoute><AuctionCreation /></ProtectedRoute>} />
           <Route path="/auction/:id" element={<ProtectedRoute><AuctionDetails /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/bidding/:auctionID" element={<BiddingPage />} />
+          <Route path="/profile/:username" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/bid-details/:auctionID" element={<ProtectedRoute><BidDetails /></ProtectedRoute>} />
           
           {/* Catch-all redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {/* Chat Assistant (Floating at Bottom-Right) */}
+        <ChatAssistant />
       </div>
     </AuthProvider>
   );

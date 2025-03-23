@@ -39,7 +39,6 @@ class AuctionService:
                 Auction.Status,
                 Auction.EndTime,
                 Auction.HighestBid,
-                Auction.EndTime,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
@@ -52,7 +51,7 @@ class AuctionService:
             .limit(page_size)
             .all()
         )
-        return [dict(zip(["AuctionID", "CardID", "Status","EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
+        return [dict(zip(["AuctionID", "CardID", "Status", "EndTime", "HighestBid", "IsValidated", "CardName", "CardQuality", "ImageURL"], row)) for row in query_result]
 
 
     def update_auction_status(self):
@@ -68,23 +67,13 @@ class AuctionService:
 
         self.db.commit()
 
+
     def get_auctions_details(self, auction_id: int):
         """
         Get auction details by auction ID
         """
         auction = ( 
-            self.db.query(            
-            Auction.AuctionID,
-            Auction.CardID,
-            Auction.Status,
-            Auction.EndTime,
-            Auction.HighestBid,
-            Card.IsValidated,
-            Card.CardName,
-            Card.CardQuality,
-            Auction.ImageURL  # Ensure this is the correct field in `Card)
-            )
-            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
+            self.db.query(Auction)
             .filter(Auction.AuctionID == auction_id) 
             .first()
         )
@@ -93,10 +82,13 @@ class AuctionService:
 
         # Update the status of the auction based on the current datetime
         current_time = datetime.now()
-        if current_time > auction.EndTime:
+        if auction.EndTime > current_time:
+            auction.Status = "In Progress"
+        elif auction.EndTime <= current_time and auction.HighestBid > 0:
             auction.Status = "Closed"
         else:
-            auction.Status = "In Progress"
+            auction.Status = "Expired"
+
         self.db.commit()
         self.db.refresh(auction)
 
@@ -328,18 +320,20 @@ class AuctionService:
             #Save the previous highest bidder ID before updating the auction
             previous_highest_bidder = auction.HighestBidderID
             previous_bidder_profile = self.db.query(Profile).filter(Profile.UserID == previous_highest_bidder).first()
-            previous_bidder_email = previous_bidder_profile.Email
-            previous_highest_bid = auction.HighestBid
-            for key, value in bid_info.model_dump().items():
-                setattr(auction, key, value)
-          # Update bid fields explicitly
-            auction.HighestBid = bid_info.BidAmount
-            auction.HighestBidderID = user_id
-            self.db.commit()
-            self.db.refresh(auction)
+            
+            # Only proceed with notification if we have a valid previous bidder profile
+            if previous_highest_bidder and previous_bidder_profile:
+                previous_bidder_email = previous_bidder_profile.Email
+                previous_highest_bid = auction.HighestBid
+                
+                for key, value in bid_info.model_dump().items():
+                    setattr(auction, key, value)
+                # Update bid fields explicitly
+                auction.HighestBid = bid_info.BidAmount
+                auction.HighestBidderID = user_id
+                self.db.commit()
+                self.db.refresh(auction)
 
-            # If the previous highest bidder exists, create a notification
-            if previous_highest_bidder:
                 message = f"You have been outbid! New highest bid: ${bid_info.BidAmount}"
                 notification = Notification(
                     ReceiverID=previous_highest_bidder,
@@ -362,6 +356,14 @@ class AuctionService:
                         "is_read": False
                     }
                 )
+            else:
+                # Just update the auction without notification
+                for key, value in bid_info.model_dump().items():
+                    setattr(auction, key, value)
+                auction.HighestBid = bid_info.BidAmount
+                auction.HighestBidderID = user_id
+                self.db.commit()
+                self.db.refresh(auction)
 
         return auction
 
@@ -436,7 +438,24 @@ class AuctionService:
     def show_winning_auctions(self, user_id: int):
         """
         Get all auctions that the user has won (status "Closed" and highest bidder ID = user ID)
+        Also updates auction status to "Closed" if end time has passed
         """
+        # First, update any auctions that have passed their end time
+        current_time = datetime.now()
+        expired_auctions = (
+            self.db.query(Auction)
+            .filter(
+                Auction.EndTime < current_time,
+                Auction.Status != "Closed"  # Only update if not already closed
+            )
+            .all()
+        )
+
+        for auction in expired_auctions:
+            auction.Status = "Closed"
+            self.db.commit()
+
+        # Then get all winning auctions
         winning_auctions = (
             self.db.query(
                 Auction.AuctionID,
@@ -444,14 +463,15 @@ class AuctionService:
                 Auction.Status,
                 Auction.HighestBid,
                 Auction.EndTime,
+                Auction.SellerID,
                 Card.IsValidated,
                 Card.CardName,
                 Card.CardQuality,
-                Card.ImageURL,  # Include ImageURL from Card
+                Card.ImageURL,
             )
-            .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            .filter(Auction.Status == "Closed", Auction.HighestBidderID == user_id)  # Only include closed auctions won by the user
-            .order_by(Auction.EndTime.desc())  # Sort by latest expiration
+            .join(Card, Auction.CardID == Card.CardID)
+            .filter(Auction.Status == "Closed", Auction.HighestBidderID == user_id)
+            .order_by(Auction.EndTime.desc())
             .all()
         )
 
@@ -461,8 +481,10 @@ class AuctionService:
                     [
                         "AuctionID",
                         "CardID",
+                        "Status",
                         "HighestBid",
                         "EndTime",
+                        "SellerID",
                         "IsValidated",
                         "CardName",
                         "CardQuality",
@@ -473,6 +495,28 @@ class AuctionService:
             )
             for row in winning_auctions
         ]
+
+    def _update_auction_status(self, auction: Auction) -> None:
+        """Update auction status based on end time"""
+        current_time = datetime.now()
+        if auction.EndTime < current_time and auction.Status != "Closed":
+            auction.Status = "Closed"
+            self.db.commit()
+
+    def is_card_available_for_auction(self, card_id: int) -> bool:
+        """
+        Check if a card is available for auction by checking if it's in a closed auction with a highest bidder
+        """
+        closed_auction = (
+            self.db.query(Auction)
+            .filter(
+                Auction.CardID == card_id,
+                Auction.Status == "Closed",
+                Auction.HighestBidderID.isnot(None)
+            )
+            .first()
+        )
+        return closed_auction is None
 
     def _update_auction_status(self, auction: Auction) -> None:
         """Update auction status based on end time"""

@@ -5,6 +5,7 @@ from app.services.profile_service import ProfileService, get_current_user
 from sqlalchemy.orm import Session
 from app.models.auction import Auction, AuctionInfo, AuctionBid, AuctionResponse
 from app.models.card import Card
+from app.models.profile import Profile
 from app.dependencies.services import get_auction_service, get_profile_service
 from pydantic import BaseModel
 from app.models.auction import AuctionInfo
@@ -36,19 +37,41 @@ async def display_auction_page(page: int = Query(1, description="Page number"), 
         auction["EndTime"] = auction["EndTime"].timestamp()
     return {"auctions": auctions, "total_pages": int(total_pages)}
 
-@router.get("/auction-details/{auction_id}", response_model=dict)
+@router.get("/auction-details/{auction_id}", response_model=dict, dependencies=[Depends(req_user_role)])
 def display_auction_details(
     auction_id: int,
     auction_service: AuctionService = Depends(get_auction_service),
+    profile_service: ProfileService = Depends(get_profile_service),
     db: Session = Depends(get_db)
 ):
     try:
+        # Get auction details
         auction_details = auction_service.get_auctions_details(auction_id)
         
         if not auction_details:
             raise HTTPException(status_code=404, detail="Auction not found")
         
+        # Get seller's username
+        seller_profile = db.query(Profile).filter(Profile.UserID == auction_details["SellerID"]).first()
+        if seller_profile:
+            auction_details["SellerUsername"] = seller_profile.Username
+        else:
+            auction_details["SellerUsername"] = "Unknown"
+
+        # Get highest bidder's username if exists
+        if auction_details.get("HighestBidderID"):
+            bidder_profile = db.query(Profile).filter(Profile.UserID == auction_details["HighestBidderID"]).first()
+            if bidder_profile:
+                auction_details["HighestBidderUsername"] = bidder_profile.Username
+            else:
+                auction_details["HighestBidderUsername"] = "Unknown"
+        else:
+            auction_details["HighestBidderUsername"] = None
+
+        # Convert EndTime to timestamp
         auction_details["EndTime"] = auction_details["EndTime"].timestamp()
+
+        return auction_details
         
     except HTTPException as e: 
         raise e

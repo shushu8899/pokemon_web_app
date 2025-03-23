@@ -16,13 +16,17 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ email: string | null } | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuth());
+  const [user, setUser] = useState<{ email: string | null } | null>(() => {
+    const email = getUserEmail();
+    return email ? { email } : null;
+  });
 
   // Check authentication status when component mounts or localStorage changes
   useEffect(() => {
     const checkAuthStatus = () => {
-      if (checkAuth()) {
+      const authStatus = checkAuth();
+      if (authStatus) {
         setIsAuthenticated(true);
         setUser({ email: getUserEmail() });
       } else {
@@ -31,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
+    // Check auth status immediately
     checkAuthStatus();
     
     // Listen for storage events (in case of multiple tabs)
@@ -42,16 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthTokens(accessToken, email);
     setIsAuthenticated(true);
     setUser({ email });
-    // Optionally store the token in sessionStorage/localStorage for direct access later
-    sessionStorage.setItem('access_token', accessToken);  // or localStorage, based on your needs
   };
 
   const logout = () => {
     clearAuthTokens();
     setIsAuthenticated(false);
     setUser(null);
-    // Clear token from storage on logout
-    sessionStorage.removeItem('access_token');
   };
 
   return (

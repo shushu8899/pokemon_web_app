@@ -7,8 +7,9 @@ from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
 import logging
 
-from app.routes import search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating, card_entry, profile, websocket, notifications
+from app.routes import chroma, search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating, card_entry, profile, notifications, websocket
 from app.exceptions import ServiceException
+from app.db.db import engine, Base
 
 # Import the HTTPBearer class
 security = HTTPBearer()
@@ -30,10 +31,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to specific domains in production
+    allow_origins=["http://localhost:5173"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    expose_headers=["*"]
 )
 
 # Global exception handler for HTTP exceptions
@@ -70,11 +72,15 @@ app.include_router(card_verification.router, prefix="/verification", tags=["Veri
 app.include_router(seller_submission.router, prefix="/auction", tags=["Submission"])
 app.include_router(auction_page.router, prefix="/bidding", tags=["Auction Page"])
 app.include_router(profile_rating.router, prefix="/profile", tags=["Rate the Seller"])
-app.include_router(search.router, prefix="/api", tags=["Search"])
+app.include_router(search.router, prefix="", tags=["Search"])
+app.include_router(chroma.router, prefix="/rag", tags=["RAG"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(profile.router, tags=["Profile"])
 app.include_router(notifications.router, prefix="/noti", tags=["Notifications"])
 app.include_router(websocket.router)
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def read_root():
