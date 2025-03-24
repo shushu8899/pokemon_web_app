@@ -92,7 +92,7 @@ async def place_bid(auction_id: int,
         raise HTTPException(status_code=404, detail="User not found")
     bid_info = AuctionBid(AuctionID=auction_id, BidAmount=bid_amount)
     try:
-        auction = auction_service.bid_auction(cognito_id, bid_info, profile_service)
+        auction = await auction_service.bid_auction(cognito_id, bid_info, profile_service)
         if not auction:
             raise HTTPException(status_code=400, detail="Failed to place bid")
         return auction

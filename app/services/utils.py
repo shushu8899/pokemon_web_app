@@ -1,19 +1,17 @@
-from app.dependencies.services import get_auction_service, get_profile_service
-from app.models.auction import Auction, AuctionInfo, AuctionBid
-from sqlalchemy.orm import Session
-from app.dependencies.db import get_db
+import asyncio
 from apscheduler.schedulers.background import BackgroundScheduler
-
-
-# Schedule the status update function every minute
+from app.dependencies.services import get_auction_service
+from app.dependencies.db import get_db
 
 def schedule_update_job():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(update_job, 'interval', minutes=1)
+    scheduler.add_job(run_async_update, 'interval', seconds=10)
     scheduler.start()
 
-def update_job():
-    auction_service = get_auction_service(db=next(get_db()))
-    auction_service.update_auction_status()
+def run_async_update():
+    asyncio.run(update_job())
 
-
+async def update_job():
+    db = next(get_db())
+    auction_service = get_auction_service(db=db)
+    await auction_service.update_auction_status()
