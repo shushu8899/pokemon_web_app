@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import SearchBar from "./SearchBar";
 import pokemonSpinner from "../assets/pokeballloading.gif";
-import surprisedPikachu from "../assets/surprisedPikachu.png";
+import surprisedPikachu from "../assets/surprisedpikachu.png";
 import axios from 'axios';
 import { getImageUrl } from '../utils/imageUtils';
 import { FaChevronLeft, FaChevronRight, FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
