@@ -62,9 +62,8 @@ const Header = () => {
           new Date(b.sent_date).getTime() - new Date(a.sent_date).getTime()
         );
         // Limit to 5 most recent notifications
-        const limitedNotifs = notifs.slice(0, 5);
-        console.log("Sorted notifications:", limitedNotifs);
-        setNotifications(limitedNotifs);
+        console.log("Sorted notifications:", notifs);
+        setNotifications(notifs);
         setUnreadCount(notifs.filter((n: Notification) => !n.is_read).length);
       } else {
         console.log("No notifications found in response:", response.data);
@@ -97,21 +96,7 @@ const Header = () => {
 
             if (incoming.message && incoming.sent_date) {
               const enriched = { ...incoming, is_read: false };
-              
-              // Set as toast notification and show it
-              setToastNotification(enriched);
-              setShowToast(true);
-              
-              // Auto-dismiss toast after 5 seconds
-              setTimeout(() => {
-                setShowToast(false);
-              }, 5000);
-              
-              setNotifications((prev) => {
-                // Add new notification and limit to 5
-                const updated = [enriched, ...prev].slice(0, 5);
-                return updated;
-              });
+              setNotifications((prev) => [enriched, ...prev]);
               setUnreadCount((prev) => prev + 1);
             }
           } catch (error) {
@@ -425,7 +410,52 @@ const Header = () => {
                             backgroundColor: notification.is_read ? 'white' : '#f8f9fa'
                           }}
                         >
-                          <div style={{ marginBottom: '0.5rem' }}>{notification.message}</div>
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            {/* Card uploaded → My Cards */}
+                            {notification.message.includes("Card") ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => navigate(PROTECTED_ROUTES.MY_CARDS)}
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Outbid → Bidding page */
+                            ) : notification.message.includes("outbid") ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() =>
+                                  notification.auction_id
+                                    ? navigate(`/bid-details/${notification.auction_id}`)
+                                    : alert("This auction has ended.")
+                                }
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Auction ended (with or without bids) → Auction details */
+                            ) : notification.message.includes("has ended") && notification.auction_id ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => navigate(`/auction/${notification.auction_id}`)}
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Won auction → Winning bids page */
+                            ) : notification.message.includes("won the auction") ? (
+                              <span
+                                style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => navigate(PROTECTED_ROUTES.WINNING_AUCTIONS)}
+                              >
+                                {notification.message}
+                              </span>
+
+                            /* Default fallback */
+                            ) : (
+                              <span>{notification.message}</span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '0.8rem', color: '#666' }}>
                             {new Date(notification.sent_date).toLocaleString()}
                           </div>

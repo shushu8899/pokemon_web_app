@@ -47,29 +47,4 @@ class WebSocketManager:
         else:
             print(f"⚠️ No active connection for {email}")
 
-    async def create_and_send_notification(self, db, receiver_id, email, message, auction_id=None):
-        """
-        Create a notification and send it via WebSocket.
-        """
-        notification = Notification(
-            ReceiverID=receiver_id,
-            AuctionID=auction_id,
-            Message=message,
-            IsRead=False
-        )
-        db.add(notification)
-        db.commit()
-        db.refresh(notification)
-
-        self.send_notification(
-            email,
-            {
-                "notification_id": notification.NotificationID,
-                "auction_id": auction_id,
-                "message": notification.Message,
-                "sent_date": notification.TimeSent.isoformat(),
-                "is_read": False
-            }
-        )
-
 websocket_manager = WebSocketManager()

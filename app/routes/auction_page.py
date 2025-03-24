@@ -92,7 +92,7 @@ async def place_bid(auction_id: int,
         raise HTTPException(status_code=404, detail="User not found")
     bid_info = AuctionBid(AuctionID=auction_id, BidAmount=bid_amount)
     try:
-        auction = auction_service.bid_auction(cognito_id, bid_info, profile_service)
+        auction = await auction_service.bid_auction(cognito_id, bid_info, profile_service)
         if not auction:
             raise HTTPException(status_code=400, detail="Failed to place bid")
         return auction
@@ -120,12 +120,6 @@ def get_winning_auctions(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# @router.get("/notifications/{auction_id}")
-# async def get_notifications(auction_id: int, db: Session = Depends(get_db)):
-#     notifications = db.query(Notification).filter(Notification.AuctionID == auction_id).all()
-#     result = [{"auction_id": n.AuctionID, "message": n.Message, "timestamp": n.TimeSent.isoformat()} for n in notifications]
-#     return JSONResponse(content=result)
 
 @router.post("/cleanup_auctions", dependencies=[Depends(req_admin_role)])
 def cleanup_auctions(background_tasks: BackgroundTasks, db: Session = Depends(get_db), auth_info: dict = Depends(get_current_user)):
