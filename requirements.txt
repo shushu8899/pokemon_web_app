@@ -14,4 +14,7 @@ langchain
 langchain_openai
 pytest
 bcrypt
-pytest-cov
+apscheduler
+chromadb[all]
+python-docx
+openai

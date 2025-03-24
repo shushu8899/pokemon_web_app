@@ -4,10 +4,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
+from fastapi.staticfiles import StaticFiles
 import logging
 
-from app.routes import search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating
+from app.routes import chroma, search, seller_submission, card_verification, auth, auction_page, pokemon_rag, profile_rating, card_entry, profile, notifications, websocket
 from app.exceptions import ServiceException
+from app.db.db import engine, Base
 
 # Import the HTTPBearer class
 security = HTTPBearer()
@@ -16,8 +18,6 @@ security = HTTPBearer()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-
 # Update the FastAPI application
 app = FastAPI(
     title="Pokémon Card Auction Platform API",
@@ -25,13 +25,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Mount static files directory
+# app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to specific domains in production
+    allow_origins=["http://localhost:5173"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    expose_headers=["*"]
 )
 
 # Global exception handler for HTTP exceptions
@@ -63,14 +67,20 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Register routes
 app.include_router(auth.router, prefix="", tags=["Authentication"])
+app.include_router(card_entry.router, prefix="/entry", tags=["Card Entry"])
 app.include_router(card_verification.router, prefix="/verification", tags=["Verification"])
 app.include_router(seller_submission.router, prefix="/auction", tags=["Submission"])
 app.include_router(auction_page.router, prefix="/bidding", tags=["Auction Page"])
-app.include_router(search.router, tags=["Search"])
 app.include_router(profile_rating.router, prefix="/profile", tags=["Rate the Seller"])
-# app.include_router(search.router, prefix="/api", tags=["Search"])
+app.include_router(search.router, prefix="", tags=["Search"])
+app.include_router(chroma.router, prefix="/rag", tags=["RAG"])
 app.include_router(pokemon_rag.router, prefix="/rag", tags=["RAG"])
+app.include_router(profile.router, tags=["Profile"])
+app.include_router(notifications.router, prefix="/noti", tags=["Notifications"])
+app.include_router(websocket.router)
 
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def read_root():
@@ -78,4 +88,4 @@ def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000, ws="websockets")

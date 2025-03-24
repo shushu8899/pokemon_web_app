@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import requests
 from app.exceptions import ServiceException
 from dotenv import load_dotenv
+from botocore.exceptions import ClientError
 
 load_dotenv()
 
@@ -92,44 +93,8 @@ class CognitoService:
         ).digest()
         return base64.b64encode(dig).decode()
 
-# ------------------------- Update the authenticate_user method for login -------------------------
-    # def authenticate_user(self, username: str, password: str):
-    #     """
-    #     Authenticate a user with Cognito using their username and password.
 
-    #     :param username: Username of the user.
-    #     :param password: Password of the user.
-    #     :return: Dictionary containing tokens if authentication is successful.
-    #     """
-    #     try:
-    #         # Calculate the SECRET_HASH
-    #         secret_hash = self.calculate_secret_hash(username)
-
-    #         # Initiate the authentication
-    #         response = self.client.initiate_auth(
-    #             AuthFlow="USER_PASSWORD_AUTH",
-    #             AuthParameters={
-    #                 "USERNAME": username,
-    #                 "PASSWORD": password,
-    #                 "SECRET_HASH": secret_hash
-    #             },
-    #             ClientId=self.client_id
-    #         )
-
-    #         return {
-    #             "id_token": response["AuthenticationResult"]["IdToken"],
-    #             "access_token": response["AuthenticationResult"]["AccessToken"],
-    #             "refresh_token": response["AuthenticationResult"]["RefreshToken"]
-    #         }
-
-    #     except self.client.exceptions.NotAuthorizedException: #based on response documentation for initiate_auth errors
-    #         raise ServiceException(status_code=401, detail="Invalid username or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
-    #     except self.client.exceptions.UserNotConfirmedException:
-    #         raise ServiceException(status_code=403, detail="User account not confirmed.")
-    #     except Exception as e:
-    #         raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
-
-    # update user login to use only email
+    # update user login to use only email -- to update login to check if user exists in aws cognito first
     def authenticate_user(self, email: str, password: str):
         """
         Authenticate a user with Cognito using their email and password.
@@ -159,12 +124,26 @@ class CognitoService:
                 "refresh_token": response["AuthenticationResult"]["RefreshToken"]
             }
 
-        except self.client.exceptions.NotAuthorizedException: #based on response documentation for initiate_auth errors
-            raise ServiceException(status_code=401, detail="Invalid email or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
-        except self.client.exceptions.UserNotConfirmedException:
-            raise ServiceException(status_code=403, detail="User account not confirmed.")
-        except Exception as e:
-            raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
+        # updated exception handling to the below due to unit testing script:
+        # except self.client.exceptions.NotAuthorizedException: #based on response documentation for initiate_auth errors
+        #     raise ServiceException(status_code=401, detail="Invalid email or password.") #create ServiceException object with status code 401 and detail message "Invalid username or password."
+        # except self.client.exceptions.UserNotConfirmedException:
+        #     raise ServiceException(status_code=403, detail="User account not confirmed.")
+        # except self.client.exceptions.UserNotFoundException:
+        #     raise ServiceException(status_code=404, detail="User account doesnt exist.")
+        # except Exception as e:
+        #     raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")
+        
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == 'NotAuthorizedException':
+                raise ServiceException(status_code=401, detail="Invalid email or password.")
+            elif error_code == 'UserNotConfirmedException':
+                raise ServiceException(status_code=403, detail="User account not confirmed.")
+            elif error_code == 'UserNotFoundException':
+                raise ServiceException(status_code=404, detail="User account doesn't exist.")
+            else:
+                raise ServiceException(status_code=500, detail=f"Authentication failed: {str(e)}")   
 
 # -------------------------- End of update -----------------------------------------------------------------------------
 
@@ -180,34 +159,6 @@ class CognitoService:
         except Exception as e:
             raise ServiceException(status_code=403, detail=f"Invalid token or permissions: {str(e)}")
 
-# ------------------------- Update the register_user method for registration 
-    # def register_user(self, username: str, email: str, password: str):
-    #     """
-    #     Register a new user with a distinct username, and store the user's email in Cognito.
-    #     """
-    #     try:
-    #         # Calculate the SECRET_HASH if your app client has a client secret
-    #         secret_hash = self.calculate_secret_hash(username)
-
-    #         response = self.client.sign_up(
-    #             ClientId=self.client_id,
-    #             SecretHash=secret_hash,
-    #             Username=username,      # <--- Distinct username
-    #             Password=password,
-    #             UserAttributes=[
-    #                 {
-    #                     'Name': 'email',
-    #                     'Value': email       # <--- Storing user's email as an attribute
-    #                 }
-    #             ]
-    #         )
-
-    #         return response
-
-    #     except self.client.exceptions.UsernameExistsException:
-    #         raise ServiceException(status_code=400, detail="User already exists.")
-    #     except Exception as e:
-    #         raise ServiceException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 
     def register_user(self, email: str, password: str):
@@ -235,41 +186,27 @@ class CognitoService:
 
         except self.client.exceptions.UsernameExistsException:
             raise ServiceException(status_code=400, detail="User already exists.")
+        except self.client.exceptions.InvalidPasswordException:
+            raise ServiceException(status_code=400, detail="Password does not meet the requirements. The password must be at least 8 characters and include a number, uppercase and a special character.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Registration failed: {str(e)}")
  
-#  --------------------------------- End of update ---------------------------------
-    
-# ------------------------- Update the confirm_user method for email confirmation -------------------------
-    # def confirm_user(self, username: str, confirmation_code: str):
-    #     """
-    #     Confirm the user's signup with the code they received by email
-    #     """
-    #     try:
-    #         # First confirm the sign-up
-    #         self.client.confirm_sign_up(
-    #             ClientId=self.client_id,
-    #             Username=username,
-    #             ConfirmationCode=confirmation_code,
-    #             SecretHash=self.calculate_secret_hash(username)
-    #         )
-
-    #         return "User confirmed successfully."
-        
-    #     except self.client.exceptions.CodeMismatchException:
-    #         raise ServiceException(status_code=400, detail="Invalid confirmation code.")
-    #     except self.client.exceptions.ExpiredCodeException:
-    #         raise ServiceException(status_code=400, detail="Confirmation code has expired.")
-    #     except self.client.exceptions.UserNotFoundException:
-    #         raise ServiceException(status_code=404, detail="User not found.")
-    #     except Exception as e:
-    #         raise ServiceException(status_code=500, detail=f"Confirmation failed: {str(e)}")
 
     def confirm_user(self, email: str, confirmation_code: str):
         """
         Confirm the user's signup with the code they received by email
+        Automatically add the user to the appropriate group based on the email domain.
         """
         try:
+            # Check if the user exists
+            try:
+                self.client.admin_get_user(
+                    UserPoolId=self.user_pool_id,
+                    Username=email
+                )
+            except self.client.exceptions.UserNotFoundException:
+                raise ServiceException(status_code=404, detail="User not found.")
+            
             # First confirm the sign-up
             self.client.confirm_sign_up(
                 ClientId=self.client_id,
@@ -278,14 +215,27 @@ class CognitoService:
                 SecretHash=self.calculate_secret_hash(email)
             )
 
-            return "User confirmed successfully."
+            # Determine the user group based on the email domain
+            if email.endswith('@mitb.smu.edu.sg'): #use guerrillamail.com for pokemail.net domain :can be changed to our sch email domain (for demo purposes)
+                group_name = 'Admins'
+            else:
+                group_name = 'Users'
+
+            # Add the user to the appropriate group
+            self.client.admin_add_user_to_group(
+                UserPoolId=self.user_pool_id,
+                Username=email,
+                GroupName=group_name
+            )
+
+            return f"User confirmed successfully and added to {group_name} group."
         
         except self.client.exceptions.CodeMismatchException:
-            raise ServiceException(status_code=400, detail="Invalid confirmation code.")
+            raise ServiceException(status_code=400, detail="Invalid confirmation code. Please check your email and re-enter the code.")
         except self.client.exceptions.ExpiredCodeException:
             raise ServiceException(status_code=400, detail="Confirmation code has expired.")
-        except self.client.exceptions.UserNotFoundException:
-            raise ServiceException(status_code=404, detail="User not found.")
+        # except self.client.exceptions.UserNotFoundException:
+        #     raise ServiceException(status_code=404, detail="User not found.")
         except Exception as e:
             raise ServiceException(status_code=500, detail=f"Confirmation failed: {str(e)}")
 # ------------------------- End of update -----------------------------------------------------------------------------
@@ -313,33 +263,97 @@ class CognitoService:
             raise ServiceException(status_code=500, detail=f"Failed to resend confirmation code: {str(e)}")
 # ------------------------- End of update -----------------------------------------------------------------------------
 
-    #add method to list all users
-    def list_users(self):
+    # #add method to list all users
+    # def list_users(self):
+    #     """
+    #     List all users in the Cognito user pool.
+    #     """
+    #     try:
+    #         users = []
+    #         response = self.client.list_users(
+    #             UserPoolId=self.user_pool_id
+    #         )
+    #         users.extend(response['Users'])
+
+    #         # Handle pagination
+    #         while 'PaginationToken' in response:
+    #             response = self.client.list_users(
+    #                 UserPoolId=self.user_pool_id,
+    #                 PaginationToken=response['PaginationToken']
+    #             )
+    #             users.extend(response['Users'])
+
+    #         return users
+    #     except self.client.exceptions.TooManyRequestsException:
+    #         raise ServiceException(status_code=429, detail="Request limit exceeded. Try again later.")
+    #     except self.client.exceptions.NotAuthorizedException:
+    #         raise ServiceException(status_code=403, detail="Insufficient permissions.")
+    #     except Exception as e:
+    #         raise ServiceException(status_code=500, detail=f"Failed to list users: {str(e)}")
+
+# add user password reset
+    def reset_password(self, email: str):
         """
-        List all users in the Cognito user pool.
+        Reset the user's password by sending a verification code to the user's email.
+        """
+        # print(f"Email: {email}")
+        # print(f"Client ID: {self.client_id}")
+        # print(f"Secret Hash: {self.calculate_secret_hash(email)}")
+        try:
+            self.client.forgot_password(
+                ClientId=self.client_id,
+                Username=email,
+                SecretHash=self.calculate_secret_hash(email)
+            )
+            return "Password reset code sent successfully."
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User not found.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Failed to send password reset code: {str(e)}")
+        
+# confirm password reset
+    def confirm_password_reset(self, email: str, password: str, reset_confirmation_code: str):
+        """
+        Confirm the password reset with the code sent to the user's email.
+        """
+        #for error checking
+        # print(f"Email: {email}")
+        # print(f"Confirmation Code: {reset_confirmation_code}")
+        # print(f"Client ID: {self.client_id}")
+        # print(f"Secret Hash: {self.calculate_secret_hash(email)}")
+
+        try:
+            self.client.confirm_forgot_password(
+                ClientId=self.client_id,
+                Username=email,
+                ConfirmationCode=reset_confirmation_code,
+                Password=password,
+                SecretHash=self.calculate_secret_hash(email)
+            )
+            return "Password reset successful."
+        except self.client.exceptions.CodeMismatchException:
+            raise ServiceException(status_code=400, detail="Invalid confirmation code.")
+        except self.client.exceptions.ExpiredCodeException:
+            raise ServiceException(status_code=400, detail="Confirmation code has expired.")
+        except self.client.exceptions.UserNotFoundException:
+            raise ServiceException(status_code=404, detail="User not found.")
+        except Exception as e:
+            raise ServiceException(status_code=500, detail=f"Failed to reset password: {str(e)}")
+        
+# add user logout
+    def logout(self, access_token: str):
+        """
+        Logout the user by invalidating their access token.
         """
         try:
-            users = []
-            response = self.client.list_users(
-                UserPoolId=self.user_pool_id
+            self.client.global_sign_out(
+                AccessToken=access_token
             )
-            users.extend(response['Users'])
-
-            # Handle pagination
-            while 'PaginationToken' in response:
-                response = self.client.list_users(
-                    UserPoolId=self.user_pool_id,
-                    PaginationToken=response['PaginationToken']
-                )
-                users.extend(response['Users'])
-
-            return users
-        except self.client.exceptions.TooManyRequestsException:
-            raise ServiceException(status_code=429, detail="Request limit exceeded. Try again later.")
+            return "Logout successful."
         except self.client.exceptions.NotAuthorizedException:
-            raise ServiceException(status_code=403, detail="Insufficient permissions.")
+            raise ServiceException(status_code=401, detail="The access token is invalid or expired.")
         except Exception as e:
-            raise ServiceException(status_code=500, detail=f"Failed to list users: {str(e)}")
+            raise ServiceException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 
 class RoleChecker:

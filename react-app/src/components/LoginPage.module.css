@@ -1,0 +1,102 @@
+.loginPage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align items to the start of the flex container */
+  height: 100vh; /* Full viewport height */
+  padding-top: 10%; /* Add padding to move the container down */
+}
+
+.loginContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 400px; /* Increased from 300px */
+  padding: 30px; /* Increased padding */
+  border: 1px solid #ccc;
+  border-radius: 8px; /* Slightly increased border radius */
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.loginContainer form {
+  width: 100%; /* Make the form take full container width */
+}
+
+.loginContainer form div {
+  margin-bottom: 20px; /* Increased margin */
+  width: 100%;
+}
+
+.loginContainer form label {
+  display: block;
+  margin-bottom: 8px; /* Increased margin */
+  font-size: 16px; /* Added explicit font size */
+  font-weight: 500; /* Made labels slightly bolder */
+}
+
+.loginContainer form input {
+  width: 100%;
+  padding: 12px; /* Increased padding */
+  box-sizing: border-box;
+  font-size: 16px; /* Increased font size */
+  border: 1px solid #ccc; /* Changed from 2px to 1px */
+  border-radius: 6px; /* Added border radius */
+  transition: border-color 0.3s ease; /* Smooth transition for hover/focus */
+}
+
+.loginContainer form input:focus {
+  outline: none;
+  border-color: #007bff; /* Change border color on focus */
+  box-shadow: 0 0 0 1px #007bff; /* Add subtle focus ring */
+}
+
+.loginContainer button {
+  width: 100%;
+  padding: 12px; /* Increased padding */
+  background-color: #007bff;
+  color: rgb(255, 255, 255);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.3s ease;
+}
+
+.loginContainer button:hover {
+  background-color: #0056b3;
+}
+
+.loginContainer p {
+  margin-top: 20px;
+  font-size: 16px;
+  width: 100%; /* Make paragraphs take full container width */
+  text-align: center; /* Center the text */
+}
+
+.signUpLink {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 5px;
+}
+
+.signUpLink:hover {
+  color: #0056b3;
+}
+
+.forgotPasswordLink {
+  color: #6c757d;
+  text-decoration: none;
+  font-size: 14px;
+  margin-top: 10px;
+  display: inline-block;
+}
+
+.forgotPasswordLink:hover {
+  color: #495057;
+  text-decoration: underline;
+}
+
+.boldText {
+  font-weight: bold;
+}

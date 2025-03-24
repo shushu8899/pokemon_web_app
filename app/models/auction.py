@@ -60,9 +60,16 @@ class AuctionBid(BaseModel):
     AuctionID: int
     BidAmount: float
 
-class AuctionResponse(AuctionBase):
+class AuctionResponse(BaseModel):
+    """Response model for auction operations"""
     AuctionID: int
     CardID: int
     SellerID: int
     MinimumIncrement: float
+    EndTime: datetime
+    Status: str
+    HighestBidderID: Optional[int] = None
+    HighestBid: float
+    
+    model_config = ConfigDict(from_attributes=True)
 

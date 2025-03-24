@@ -13,21 +13,33 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
-    <main className="flex justify-center items-center">
-      <input 
-        type="text" 
-        value={query} 
-        onChange={(e) => setQuery(e.target.value)} 
-        placeholder="Search for cards or profiles" 
-        className="search-bar"
-        style={{ width: '400px', height: "40px", border: "1px solid orange", borderRadius: "5px", padding: "10px" }}
-      />
-      <button onClick={handleSearch} className="p-2 text-black rounded bg-orange-200 hover:bg-orange-300"
-      style = {{ marginLeft: "10px" }}>
-        Search
-      </button>
-    </main>
+    <div className="flex flex-col items-center w-full max-w-3xl">
+      <h1 className="text-2xl font-bold mb-4 pb-2 border-b-2 border-yellow-400 w-full text-center">Find Your Next Great Deal</h1>
+      
+      <div className="flex w-full mt-2">
+        <input 
+          type="text" 
+          value={query} 
+          onChange={(e) => setQuery(e.target.value)} 
+          onKeyDown={handleKeyPress}
+          placeholder="Search for cards or profiles" 
+          className="flex-1 p-3 pl-5 border border-yellow-400 rounded-l-full focus:outline-none"
+        />
+        <button 
+          onClick={handleSearch} 
+          className="bg-yellow-400 text-black px-6 py-3 rounded-r-full hover:bg-yellow-500 transition-colors font-medium"
+        >
+          Search
+        </button>
+      </div>
+    </div>
   );
 }
 

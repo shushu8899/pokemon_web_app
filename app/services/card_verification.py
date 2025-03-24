@@ -1,116 +1,165 @@
-import pytesseract
-import requests
 import cv2
 import numpy as np
-import re
+import requests
 from pathlib import Path
-from fastapi.responses import JSONResponse
+import os
+from app.services.s3_service import s3#  Import s3 directly
 
-# ✅ Define API Key for Pokémon TCG API
 API_KEY = "67652158-5942-474b-bcef-653249bba035"
 BASE_URL = "https://api.pokemontcg.io/v2/cards"
 
-# ✅ Set Up Path to Tesseract (Ensure This is Correct on Your Machine)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-### **🔹 Function: Find Name Region in Image**
-def find_name_region(image_path):
-    img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
-
-    # ✅ Resize to fixed size (600x825px)
-    FIXED_WIDTH, FIXED_HEIGHT = 600, 825
-    img = cv2.resize(img, (FIXED_WIDTH, FIXED_HEIGHT))
-
-    # ✅ Adjust Cropping to be More Focused
-    cropped_name_area = img[int(FIXED_HEIGHT * 0.05):int(FIXED_HEIGHT * 0.11),  
-                            int(FIXED_WIDTH * 0.22):int(FIXED_WIDTH * 0.75)]  
-
-    # ✅ Apply Adaptive Thresholding
-    cropped_name_area = cv2.GaussianBlur(cropped_name_area, (3,3), 0)
-    _, thresh = cv2.threshold(cropped_name_area, 120, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # ✅ Dilate to Connect Broken Characters
-    kernel = np.ones((2, 2), np.uint8)
-    processed_name = cv2.dilate(thresh, kernel, iterations=1)
-
-    # ✅ Save Debug Image
-    debug_dir = Path(__file__).parent.parent / "static/images"
-    debug_dir.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
-    debug_path = debug_dir / "debug_cropped_name.jpg"
-    cv2.imwrite(str(debug_path), processed_name)
-    print(f"🖼️ Debug Name Image Saved: {debug_path}")
-
-    return processed_name
-
-### **🔹 Function: Extract Text from Pokémon Card (OCR)**
-def extract_text(image_path):
-    img = find_name_region(image_path)  
-
-    # ✅ Apply OCR with a whitelist including apostrophe
-    extracted_text = pytesseract.image_to_string(
-        img,
-        config="--psm 7 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-' "
-    )
-
-    extracted_text = extracted_text.replace("\n", " ").strip()  
-    extracted_text = extracted_text.replace("’", "'")  # Normalize apostrophe
-    extracted_text = extracted_text.replace("oo", "00")  
-
-    # 🔹 Fix Missing Spaces Between Words
-    extracted_text = re.sub(r"(?<=[a-zA-Z])(?=[A-Z])", " ", extracted_text)
-
-    print(f"🔍 Extracted Pokémon Name: {extracted_text}")  
-    return extracted_text
-
-### **🔹 Function: Extract Pokémon Name More Accurately**
-def extract_pokemon_name(extracted_text):
-    extracted_text = extracted_text.replace("’", "'").strip()  # Normalize apostrophe and remove spaces
-
-    # ✅ Remove unwanted characters but KEEP `'`
-    cleaned_text = re.sub(r"[^A-Za-z\s'-]", '', extracted_text).strip()
-    
-    words = cleaned_text.split()
-    if not words:
-        return "Unknown"
-
-    return " ".join(words)  
-
-### **🔹 Function: Validate Pokémon Name via API**
-def validate_pokemon_card(pokemon_name):
-    pokemon_name = pokemon_name.replace("’", "'").strip()  # Normalize apostrophe and trim spaces
-
-    params = {"q": f'name:"{pokemon_name}"'}
+### 🔹 Download Official Card Image using Pokémon TCG API Card ID
+def get_official_card_image(card_tcg_id):
+    print(f"🔍 Fetching official card image for ID: {card_tcg_id}")
+    params = {"q": f'id:"{card_tcg_id}"'}
     headers = {"X-Api-Key": API_KEY}
-    response = requests.get(BASE_URL, headers=headers, params=params)
     
+    print(f"🌐 Making request to: {BASE_URL}")
+    print(f"🔑 Using API Key: {API_KEY[:8]}...")
+    
+    try:
+        response = requests.get(BASE_URL, headers=headers, params=params)
+        print(f"📡 Response status code: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"Found {len(data.get('data', []))} cards")
+            
+            cards = data.get("data", [])
+            if len(cards) > 0:
+                image_url = cards[0]['images']['large']
+                print(f"Successfully found image URL: {image_url}")
+                return image_url
+            else:
+                print("No cards found in the response")
+        else:
+            print(f"API request failed with status code: {response.status_code}")
+            print(f"Response content: {response.text}")
+            
+    except Exception as e:
+        print(f"Error fetching card image: {str(e)}")
+    
+    return None
+
+### 🔹 Download Image from URL
+def download_image_from_url(url):
+    response = requests.get(url)
     if response.status_code == 200:
-        cards = response.json().get("data", [])
-        return len(cards) > 0  
-    return False
+        img_array = np.frombuffer(response.content, np.uint8)
+        return cv2.imdecode(img_array, cv2.IMREAD_GRAYSCALE)
+    return None
 
-### **🔹 Main Function: Authenticate Pokémon Cards (OCR + API Validation)**
-def authenticate_card(image_path):
-    image_path = Path(image_path)  # Ensure path is a Pathlib object
+### 🔹 ORB Feature Matching
+def match_images(uploaded_img, offical_img):
+    # Check if images are loaded
+    print(f"Image 1 loaded: {'Yes' if uploaded_img is not None else 'No'}")
+    print(f"Image 2 loaded: {'Yes' if offical_img is not None else 'No'}")
 
-    if not image_path.exists():
-        return JSONResponse(content={"error": f"🚨 Image file '{image_path}' not found."}, status_code=400)
+    if uploaded_img is None or offical_img is None:
+        print("One or both images failed to load.")
+        return False, 0
 
-    extracted_text = extract_text(image_path)  
+    orb = cv2.ORB_create()
 
-    if not extracted_text:
-        return JSONResponse(content={"error": "🚨 Could not extract any text from the card."}, status_code=400)
+    # Detect keypoints and descriptors
+    kp1, des1 = orb.detectAndCompute(uploaded_img, None)
+    kp2, des2 = orb.detectAndCompute(offical_img, None)
 
-    pokemon_name = extract_pokemon_name(extracted_text)  
-    print(f"✅ Final Pokémon Name Sent for Verification: {pokemon_name}")  
+    print(f"Descriptors in Image 1: {'Found' if des1 is not None else 'Not Found'}")
+    print(f"Descriptors in Image 2: {'Found' if des2 is not None else 'Not Found'}")
 
-    # ✅ Validate the Pokémon name using Pokémon TCG API
-    valid = validate_pokemon_card(pokemon_name)
+    if des1 is None or des2 is None:
+        print("Descriptors missing for one or both images!")
+        return False, 0
 
-    # ✅ Return result based on API check
-    return {
-        "message": "Verification complete",
-        "result": {
-            "result": "Authentic" if valid else "Fake",  
-            "pokemon_name": pokemon_name
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(des1, des2)
+    matches = sorted(matches, key=lambda x: x.distance)
+    good_matches = [m for m in matches if m.distance < 60]
+
+    print(f"Threshold for Good Matches: 60")
+    print(f"Total Matches: {len(matches)} | Good Matches: {len(good_matches)}")
+
+    avg_distance = sum(m.distance for m in good_matches) / len(good_matches) if good_matches else 0
+    print(f"Average Descriptor Distance (Good Matches): {avg_distance:.2f}")
+
+    match_percentage = (len(good_matches) / len(matches)) * 100 if matches else 0
+    print(f"Match Accuracy: {match_percentage:.2f}%")
+
+    REQUIRED_PERCENT = 90.0
+    is_authentic = (match_percentage >= REQUIRED_PERCENT)
+
+    if is_authentic:
+        print("Card is REAL")
+    else:
+        print("Card is FAKE")
+
+    return is_authentic, match_percentage
+
+### 🔹 Main Verification Function (Same Name)
+def authenticate_card(image_path, pokemon_tcg_id):
+    print("\nStarting card verification process...")
+    print(f"Card TCG ID: {pokemon_tcg_id}")
+    print(f"Image path: {image_path}")
+    
+    try:
+        # Validate S3 URL
+        print("Validating S3 URL...")
+        s3.valid_url(image_path)
+        print("S3 URL is valid")
+
+        print("\nFetching official card image...")
+        official_url = get_official_card_image(pokemon_tcg_id)
+
+        if not official_url:
+            print("Failed to get official card image")
+            return {
+                "message": "Verification failed",
+                "result": {
+                    "result": "Fake",
+                    "card_tcg_id": pokemon_tcg_id,
+                    "error": "Official card image not found in Pokémon TCG API."
+                }
+            }
+
+        print("\nDownloading images...")
+        print(f"Downloading uploaded image from: {image_path}")
+        uploaded_img = download_image_from_url(image_path)
+        print(f"Downloading official image from: {official_url}")
+        official_img = download_image_from_url(official_url)
+
+        if official_img is None:
+            print("Failed to download official image")
+            return {
+                "message": "Verification failed",
+                "result": {
+                    "result": "Error",
+                    "card_tcg_id": pokemon_tcg_id,
+                    "error": "Failed to download official card image."
+                }
+            }
+
+        print("\nMatching images...")
+        is_authentic, match_percentage = match_images(uploaded_img, official_img)
+
+        result = {
+            "message": "Verification complete",
+            "result": {
+                "result": "Authentic" if is_authentic else "Fake",
+                "card_tcg_id": pokemon_tcg_id,
+                "match_percentage": f"{match_percentage:.2f}%"
+            }
         }
-    }
+        print(f"\nVerification complete: {result['result']['result']}")
+        return result
+
+    except Exception as e:
+        print(f"\nError during verification: {str(e)}")
+        return {
+            "message": "Verification failed",
+            "result": {
+                "result": "Error",
+                "card_tcg_id": None,
+                "error": str(e)
+            }
+        }

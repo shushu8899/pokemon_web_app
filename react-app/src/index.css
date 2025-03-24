@@ -1,9 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 @import "tailwindcss";
-img {
-    max-width: 15%;
-    height: 50%;
-    display: block;
-  }
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
+}
 
 /* Custom bold text */
 .bold-text {
@@ -11,7 +11,7 @@ img {
 }
 
 h1 {
-    font-size: 2.5rem;
+    /* font-size: 2.5rem; */
     font-weight: bold;
     text-align: center;
 }
@@ -41,21 +41,21 @@ animation: shimmer 2s infinite linear;
 
 @keyframes glow {
     0% {
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+      box-shadow: 0 0 10px rgba(28, 28, 27, 0.244);
     }
     50% {
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+      box-shadow: 0 0 20px rgba(9, 9, 8, 0.8);
     }
     100% {
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+      box-shadow: 0 0 10px rgba(18, 18, 17, 0.4);
     }
   }
   
   .glowing-box {
-    border: 3px solid #FFD700;
+    border: 3px solid #d3d3d35a;
     border-radius: 16px;
-    background-color: #003366;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    background-color: #f4f7fa;
+    box-shadow: 0 0 15px rgba(130, 130, 126, 0.6);
     animation: glow 1.5s infinite alternate; /* Glow effect */
   }
   

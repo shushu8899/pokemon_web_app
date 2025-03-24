@@ -17,7 +17,6 @@ This file defines the authentication endpoints for the FastAPI application.
 - add a new endpoint for user profile update
 - add a new endpoint for user profile retrieval
 - customise confirmation email template (e.g. add logo, change text, etc.)
-- MFA (multi-factor authentication) for login, confirmation
 '''
 
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -83,12 +82,12 @@ def confirm(email: str, confirmation_code: str):
     """
     try:
         # Confirm sign-up
-        cognito_service.confirm_user(
+        response = cognito_service.confirm_user(
             email=email,
             confirmation_code=confirmation_code,
         )
 
-        return {"message": "User confirmed successfully."}
+        return response 
 
     except ServiceException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -115,4 +114,38 @@ def delete_profile(username: str, service: CognitoService = Depends(), db: Sessi
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
     return {"detail": "Profile deleted successfully"}
 
-
+# add new endpoint for password reset
+@router.post("/reset-password")
+def reset_password(email: str):
+    """
+    Reset the user's password by sending a verification code to the user's email .
+    """
+    try:
+        response = cognito_service.reset_password(email)
+        return response
+    except ServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    
+#add new endpoint for confirm password reset
+@router.post("/confirm-password-reset")
+def confirm_password_reset(email: str, new_password: str, reset_confirmation_code: str,):
+    """
+    Confirm the user's password reset.
+    """
+    try:
+        response = cognito_service.confirm_password_reset(email, new_password, reset_confirmation_code)
+        return response
+    except ServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    
+# add new endpoint for user logout
+@router.post("/logout")
+def logout(access_token: str):
+    """
+    Logout the user.
+    """
+    try:
+        response = cognito_service.logout(access_token)
+        return response
+    except ServiceException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
