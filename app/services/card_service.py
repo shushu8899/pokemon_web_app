@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.card import Card, CardInfo
 from app.models.profile import Profile
 from app.models.auction import Auction
+from app.exceptions import ServiceException
 
 
 class CardService:
