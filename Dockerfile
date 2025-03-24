@@ -1,4 +1,22 @@
-# Use official Python image as base
+# Use Node.js for building the React app
+FROM node:18 AS node-builder
+
+# Set working directory
+WORKDIR /react-app
+
+# Copy react-app files
+COPY ./react-app ./
+
+# Clean npm cache and remove node_modules to avoid conflicts
+RUN rm -rf node_modules package-lock.json /root/.npm && npm cache clean --force
+
+# Install React app dependencies
+RUN npm install
+
+# Build the React app
+RUN npm run build
+
+# Use Python for the FastAPI backend
 FROM python:3.9
 
 # Set environment variables
@@ -8,21 +26,18 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
-
-# Install dependencies
+# Install Python dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Run the react-app installations
-RUN npm install --prefix ./react-app
-RUN npm install --prefix ./node_modules
-
-# Copy the rest of the application code
+# Copy backend code
 COPY . .
 
-# Expose the FastAPI default port
+# Copy the built React app from the node-builder stage
+COPY --from=node-builder /react-app/build ./react-app/build
+
+# Expose the FastAPI port
 EXPOSE 8000
 
-# Run FastAPI app (Change "app.main:app" to your FastAPI entry point if different)
+# Run the FastAPI app
 CMD ["bash", "integration_test_script.sh"]
