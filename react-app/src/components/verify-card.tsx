@@ -26,7 +26,15 @@ const VerifyCard: React.FC = () => {
   const [tcgCardId, setTcgCardId] = useState<string>("");
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [cardName, setCardName] = useState<string>("");
+  const [cardQuality, setCardQuality] = useState<string>("MINT");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowTcgIdModal(true);
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
