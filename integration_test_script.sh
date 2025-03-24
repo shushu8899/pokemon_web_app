@@ -44,4 +44,7 @@ echo "Applying migrations..."
 python3 -m alembic upgrade head
 
 echo "Starting FastAPI application with uvicorn..."
-uvicorn app.main:app --reload # Run your app in the background
+uvicorn app.main:app --reload & # Run your app in the background
+
+cd react-app
+npm run dev
