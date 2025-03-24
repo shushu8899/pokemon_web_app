@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Run the react-app installations
+RUN npm install --prefix ./react-app
+RUN npm install --prefix ./node_modules
+
 # Copy the rest of the application code
 COPY . .
 
@@ -21,4 +25,4 @@ COPY . .
 EXPOSE 8000
 
 # Run FastAPI app (Change "app.main:app" to your FastAPI entry point if different)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["bash", "integration_test_script.sh"]
