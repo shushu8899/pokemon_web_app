@@ -13,6 +13,7 @@ python-jose==3.3.0
 langchain
 langchain_openai
 pytest
+pytest-asyncio
 bcrypt
 apscheduler
 chromadb[all]
