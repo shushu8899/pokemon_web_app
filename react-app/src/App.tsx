@@ -90,7 +90,7 @@ function App() {
               <AuctionList />
             </>
           } />
-          <Route path="/search" element={<SearchPage fetchSearchResults={fetchSearchResults} />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
