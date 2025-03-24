@@ -16,6 +16,7 @@ import os  # Import the os module
 from typing import List
 from datetime import datetime
 from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 
@@ -83,12 +84,12 @@ class AuctionWithCardDetails(BaseModel):
     MinimumIncrement: float
     EndTime: datetime
     Status: str
-    HighestBidderID: int | None
+    HighestBidderID: Optional[int] = None 
     HighestBid: float
     # Card details
     CardName: str
     CardQuality: str
-    ImageURL: str | None
+    ImageURL: Optional[str] = None
     IsValidated: bool
 
 @router.get("/my-auctions", response_model=List[AuctionWithCardDetails], dependencies=[Depends(req_user_role)])
