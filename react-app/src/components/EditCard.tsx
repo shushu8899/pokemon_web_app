@@ -89,7 +89,7 @@ const EditCard: React.FC = () => {
                 throw new Error('You must be logged in to edit cards');
             }
 
-            let s3ImageUrl = cardDetails?.image_url; // Use existing image URL as default
+            let s3ImageUrl = null;
             if (selectedFile) {
                 const { upload_url, s3_url } = await getPresignedUrl(selectedFile, authHeader);
                 await uploadToS3(selectedFile, upload_url);
@@ -100,7 +100,9 @@ const EditCard: React.FC = () => {
             formData.append('card_id', cardId.toString());
             formData.append('card_name', cardName);
             formData.append('card_quality', cardQuality);
-            formData.append('image_url', s3ImageUrl || ''); // Always include image_url
+            if (s3ImageUrl) {
+                formData.append('image_url', s3ImageUrl);
+            }
 
             console.log('Sending form data:', {
                 card_id: cardId,

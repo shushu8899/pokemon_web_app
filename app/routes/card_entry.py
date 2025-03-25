@@ -116,7 +116,7 @@ async def update_card_entry(
     card_id: int = Form(...),
     card_name: str = Form(...),
     card_quality: str = Form(...),
-    image_url: str = Form(...), 
+    image_url: str = Form(None),
     db: Session = Depends(get_db),
     auth_info: dict = Depends(get_current_user)
 ):
