@@ -19,6 +19,9 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./react-app:/react-app
+      - ./react-app:/react-app # Mount react-app folder correctly
+      - /react-app/node_modules # Don't overwrite node_modules
+    working_dir: /react-app
+    command: [ "npm", "run", "dev" ]
     depends_on:
       - backend
