@@ -71,7 +71,7 @@ const CardEntry: React.FC = () => {
         {
           headers: {
             'Authorization': authHeader,
-            'Content-Type': "application/x-www-form-urlencoded",
+            'Content-Type': 'multipart/form-data',
           },
         }
       );

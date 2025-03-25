@@ -47,6 +47,7 @@ async def create_card_entry(
 ):
     """
     Users (admins and regular users) can create a Pokémon card entry with details.
+    Multiple cards with the same name are allowed for the same user.
     """
     cognito_user_id = auth_info.get("sub")
 
@@ -56,16 +57,11 @@ async def create_card_entry(
         raise HTTPException(status_code=404, detail="User profile not found")
 
     owner_id = user_profile.UserID
-
-    # Check if card already exists for this user
-    existing_card = db.query(Card).filter(Card.CardName.ilike(card_name), Card.OwnerID == owner_id).first()
-    if existing_card:
-        raise HTTPException(status_code=400, detail="Card already exists for this user")
     
-    # Create a new card entry
+    # Create a new card entry with the exact name provided
     new_card = Card(
         OwnerID=owner_id,
-        CardName=card_name,
+        CardName=card_name,  # Use the exact name without any unique identifier
         CardQuality=card_quality,
         IsValidated=False,
         ImageURL=image_url
@@ -110,7 +106,8 @@ async def create_card_entry(
     return {
         "message": "Card entry successful",
         "card_id": new_card.CardID,
-        "image_url": image_url
+        "image_url": image_url,
+        "card_name": new_card.CardName  # Return the exact card name
     }
 
 

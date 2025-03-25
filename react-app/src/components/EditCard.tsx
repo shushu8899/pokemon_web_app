@@ -89,24 +89,27 @@ const EditCard: React.FC = () => {
                 throw new Error('You must be logged in to edit cards');
             }
 
-            let s3ImageUrl = null;
+            let s3ImageUrl = cardDetails?.image_url; // Use existing image URL as default
             if (selectedFile) {
                 const { upload_url, s3_url } = await getPresignedUrl(selectedFile, authHeader);
-        
                 await uploadToS3(selectedFile, upload_url);
-        
                 s3ImageUrl = s3_url;
             }
 
             const formData = new FormData();
+            formData.append('card_id', cardId.toString());
             formData.append('card_name', cardName);
             formData.append('card_quality', cardQuality);
-            formData.append('card_id', cardId.toString());
-            if (s3ImageUrl) {
-                formData.append("image_url", s3ImageUrl);
-              }
+            formData.append('image_url', s3ImageUrl || ''); // Always include image_url
 
-            await axios.put(
+            console.log('Sending form data:', {
+                card_id: cardId,
+                card_name: cardName,
+                card_quality: cardQuality,
+                image_url: s3ImageUrl
+            });
+
+            const response = await axios.put(
                 `http://127.0.0.1:8000/entry/card-entry/update`,
                 formData,
                 {
@@ -117,6 +120,7 @@ const EditCard: React.FC = () => {
                 }
             );
 
+            console.log('Update response:', response.data);
             navigate('/my-cards');
         } catch (err: any) {
             console.error('Error updating card:', err);
