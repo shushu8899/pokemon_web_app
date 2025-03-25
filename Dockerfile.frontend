@@ -5,14 +5,17 @@ FROM node:18
 WORKDIR /react-app
 
 # Copy package.json and install dependencies
-COPY react-app/package.json react-app/package-lock.json ./
+COPY /react-app/package.json .
+COPY /react-app/package-lock.json .
 RUN npm install
 
 # Copy the rest of the frontend files
-COPY react-app ./
+COPY . .
 
 # Expose the Vite development port
 EXPOSE 5173
+
+WORKDIR /react-app
 
 # Run the Vite dev server
 CMD ["npm", "run", "dev"]

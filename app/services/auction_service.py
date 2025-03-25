@@ -43,7 +43,7 @@ class AuctionService:
                 Card.ImageURL,  # Include ImageURL from Card
             )
             .join(Card, Auction.CardID == Card.CardID)  # Join auctions with card details
-            # .filter(Auction.EndTime >= current_date)  # Only include auctions that are not expired to add back
+            .filter(Auction.EndTime >= current_date)  #Only include auctions that are not expired 
             .order_by(Auction.EndTime)  # Sort by earliest expiration
             .offset(offset)
             .limit(page_size)
