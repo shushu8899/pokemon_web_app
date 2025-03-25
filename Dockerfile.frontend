@@ -1,0 +1,18 @@
+# Use Node.js image
+FROM node:18
+
+# Set working directory
+WORKDIR /react-app
+
+# Copy package.json and install dependencies
+COPY react-app/package.json react-app/package-lock.json ./
+RUN npm install
+
+# Copy the rest of the frontend files
+COPY react-app ./
+
+# Expose the Vite development port
+EXPOSE 5173
+
+# Run the Vite dev server
+CMD ["npm", "run", "dev"]
