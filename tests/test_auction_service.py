@@ -35,7 +35,7 @@ def mock_profile_service():
 @pytest.fixture
 def test_data():
     """Fixture providing common test data"""
-    current_time = datetime.now()
+    current_time = datetime.now(ZoneInfo("Asia/Singapore")
     return {
         "user_id": 1,
         "bidder_id": 2,
@@ -146,7 +146,7 @@ async def test_update_auction_status_closed_with_bid(auction_service, mock_db, t
     # Mock add method to capture notifications
     def mock_add_side_effect(notification):
         # Add TimeSent field to avoid isoformat() error
-        notification.TimeSent = datetime.now()
+        notification.TimeSent = datetime.now(ZoneInfo("Asia/Singapore")
         notification.NotificationID = len(mock_notifications) + 1
         mock_notifications.append(notification)
         return notification
@@ -229,7 +229,7 @@ async def test_update_auction_status_expired_no_bid(auction_service, mock_db, te
     # Mock add method to capture notifications
     def mock_add_side_effect(notification):
         # Add TimeSent field to avoid isoformat() error
-        notification.TimeSent = datetime.now()
+        notification.TimeSent = datetime.now(ZoneInfo("Asia/Singapore")
         notification.NotificationID = len(mock_notifications) + 1
         mock_notifications.append(notification)
         return notification

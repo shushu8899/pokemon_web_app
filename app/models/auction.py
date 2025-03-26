@@ -32,7 +32,7 @@ class Auction(Base):
 
     def has_ended(self):
         """Check if the auction has ended."""
-        return datetime.now(timezone.utc) > self.EndTime
+        return datetime.now(ZoneInfo("Asia/Singapore")) > self.EndTime
 
 
 class AuctionBase(BaseModel):
@@ -48,7 +48,7 @@ class AuctionBase(BaseModel):
     @classmethod
     def check_endtime(cls, value : datetime):
         # Make sure end time is later than now
-        if value <= datetime.now():
+        if value <= datetime.now(ZoneInfo("Asia/Singapore")):
             raise ValueError("End Time must be later than today!")
         
         return value

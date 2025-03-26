@@ -162,7 +162,7 @@ class AuctionService:
             raise HTTPException(status_code=404, detail="Auction not found")
 
         # Update the status of the auction based on the current datetime
-        current_time = datetime.now()
+        current_time = datetime.now(ZoneInfo("Asia/Singapore"))
         if auction.EndTime > current_time:
             auction.Status = "In Progress"
         elif auction.EndTime <= current_time and auction.HighestBid > 0:
@@ -233,10 +233,10 @@ class AuctionService:
             raise HTTPException(status_code=400, detail="Card is already in an auction that is in progress")
 
         # Calculate the end time of the auction
-        end_time = datetime.now() + timedelta(hours=auction_duration)
+        end_time = datetime.now(ZoneInfo("Asia/Singapore")) + timedelta(hours=auction_duration)
 
         # Validate the end time
-        if end_time <= datetime.now():
+        if end_time <= datetime.now(ZoneInfo("Asia/Singapore")):
             raise HTTPException(status_code=400, detail="End Time must be later than the current time!")
 
         # Validate the starting bid
@@ -253,7 +253,7 @@ class AuctionService:
             SellerID=card.OwnerID,
             MinimumIncrement=minimum_increment,
             EndTime=end_time,
-            Status="In Progress" if end_time > datetime.now() else "Ended",
+            Status="In Progress" if end_time > datetime.now(ZoneInfo("Asia/Singapore")) else "Ended",
             HighestBidderID=None,  # Set to None initially
             HighestBid=starting_bid
         )
@@ -319,10 +319,10 @@ class AuctionService:
             raise HTTPException(status_code=403, detail="You cannot update auction because it is already in progress")
 
         # Calculate the end time of the auction
-        end_time = datetime.now() + timedelta(hours=auction_duration)
+        end_time = datetime.now(ZoneInfo("Asia/Singapore")) + timedelta(hours=auction_duration)
 
         # Validate the end time
-        if end_time <= datetime.now():
+        if end_time <= datetime.now(ZoneInfo("Asia/Singapore")):
             raise HTTPException(status_code=400, detail="End Time must be later than the current time!")
 
         # Validate the starting bid
@@ -339,7 +339,7 @@ class AuctionService:
         auction.HighestBid = starting_bid  # Update HighestBid to match starting_bid
 
         # Compare current datetime vs end time of the auction
-        current_time = datetime.now()
+        current_time = datetime.now(ZoneInfo("Asia/Singapore"))
         if current_time > auction.EndTime:
             auction.Status = "Closed"
         else:
@@ -462,7 +462,7 @@ class AuctionService:
         Also updates auction status to "Closed" if end time has passed
         """
         # First, update any auctions that have passed their end time
-        current_time = datetime.now()
+        current_time = datetime.now(ZoneInfo("Asia/Singapore"))
         expired_auctions = (
             self.db.query(Auction)
             .filter(
